@@ -1,0 +1,217 @@
+{
+  "$comment": "License and notice texts vendored byte-for-byte from the installed packages listed below. Hashes are SHA-256 of the vendored files. Font/OFL and Material Symbols licenses already live under extension/fonts and extension/icons respectively and are not duplicated here.",
+  "generatedAt": "2026-11-21",
+  "packages": [
+    {
+      "package": "monaco-editor",
+      "version": "0.57.0",
+      "license": "MIT",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/microsoft/monaco-editor"
+      },
+      "homepage": "https://github.com/microsoft/monaco-editor",
+      "installedPath": "node_modules/monaco-editor",
+      "files": [
+        {
+          "path": "monaco-editor/LICENSE",
+          "upstreamFile": "LICENSE",
+          "bytes": 1098,
+          "sha256": "33e4ff1a06ef62ba21788ea162564ee8165269a24a9ce6ef301837447eab0ac6"
+        },
+        {
+          "path": "monaco-editor/ThirdPartyNotices.txt",
+          "upstreamFile": "ThirdPartyNotices.txt",
+          "bytes": 63064,
+          "sha256": "790537262fc78a764e121e6b92b959bcd3f5c310b47d9d9b9e92e17fe0af5336"
+        }
+      ]
+    },
+    {
+      "package": "vscode-jsonrpc",
+      "version": "9.0.3",
+      "license": "MIT",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/Microsoft/vscode-languageserver-node.git",
+        "directory": "jsonrpc"
+      },
+      "homepage": null,
+      "installedPath": "node_modules/vscode-jsonrpc",
+      "files": [
+        {
+          "path": "vscode-jsonrpc/License.txt",
+          "upstreamFile": "License.txt",
+          "bytes": 1095,
+          "sha256": "ec9ee83580841e8eb687aca9867f221503809ba6426c7f876ede17d91b9fcfd0"
+        },
+        {
+          "path": "vscode-jsonrpc/thirdpartynotices.txt",
+          "upstreamFile": "thirdpartynotices.txt",
+          "bytes": 623,
+          "sha256": "a89123562fe364dc8e969e85614eb6c1f8452afe131d6e42bd1314bb2d092b04"
+        }
+      ]
+    },
+    {
+      "package": "vscode-languageserver-protocol",
+      "version": "3.18.4",
+      "license": "MIT",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/Microsoft/vscode-languageserver-node.git",
+        "directory": "protocol"
+      },
+      "homepage": null,
+      "installedPath": "node_modules/vscode-languageserver-protocol",
+      "files": [
+        {
+          "path": "vscode-languageserver-protocol/License.txt",
+          "upstreamFile": "License.txt",
+          "bytes": 1095,
+          "sha256": "ec9ee83580841e8eb687aca9867f221503809ba6426c7f876ede17d91b9fcfd0"
+        },
+        {
+          "path": "vscode-languageserver-protocol/thirdpartynotices.txt",
+          "upstreamFile": "thirdpartynotices.txt",
+          "bytes": 1823,
+          "sha256": "9265d27cf75775aa5ae19c5ba01846fb70ecd5121f8c39c81bef7e03f007072c"
+        }
+      ]
+    },
+    {
+      "package": "vscode-ws-jsonrpc",
+      "version": "4.0.3",
+      "license": "MIT",
+      "repository": {
+        "type": "git",
+        "url": "git+https://github.com/TypeFox/monaco-languageclient.git",
+        "directory": "packages/vscode-ws-jsonrpc"
+      },
+      "homepage": "https://github.com/TypeFox/monaco-languageclient/blob/main/packages/vscode-ws-jsonrpc/README.md",
+      "installedPath": "node_modules/vscode-ws-jsonrpc",
+      "files": [
+        {
+          "path": "vscode-ws-jsonrpc/LICENSE",
+          "upstreamFile": "LICENSE",
+          "bytes": 1075,
+          "sha256": "e38068a66559a5585e0de2d6f0c577c2e021091520def55c294a2077af4b30dd"
+        }
+      ]
+    },
+    {
+      "package": "monaco-languageserver-types",
+      "version": "0.4.1",
+      "license": "MIT",
+      "repository": "remcohaszing/monaco-languageserver-types",
+      "homepage": "https://github.com/remcohaszing/monaco-languageserver-types",
+      "installedPath": "node_modules/monaco-languageserver-types",
+      "files": [
+        {
+          "path": "monaco-languageserver-types/LICENSE.md",
+          "upstreamFile": "LICENSE.md",
+          "bytes": 1079,
+          "sha256": "2dfbe68133c7e886b8711f4012d67eeab02f44852409f2d35b9c8c9a46d591b0"
+        }
+      ]
+    },
+    {
+      "package": "vscode-uri",
+      "version": "3.2.0",
+      "license": "MIT",
+      "repository": {
+        "type": "git",
+        "url": "git+https://github.com/microsoft/vscode-uri.git"
+      },
+      "homepage": "https://github.com/microsoft/vscode-uri#readme",
+      "installedPath": "node_modules/.pnpm/vscode-uri@3.2.0/node_modules/vscode-uri",
+      "files": [
+        {
+          "path": "vscode-uri/LICENSE.md",
+          "upstreamFile": "LICENSE.md",
+          "bytes": 1070,
+          "sha256": "c669138cb1eb01fbb745e8e460b291e4f2869c14a40061390b6095d845ed4c82"
+        }
+      ],
+      "note": "Transitive runtime dependency of monaco-languageserver-types; resolved version 3.2.0 in the pnpm store, as installed by pnpm 12.9.0."
+    },
+    {
+      "package": "@kyralabs/m3e-css",
+      "version": "1.8.0",
+      "license": "Apache-2.0",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/kyra-labs/m3exp-web",
+        "directory": "packages/m3e-css"
+      },
+      "homepage": "https://github.com/kyra-labs/m3exp-web/tree/main/packages/m3e-css#readme",
+      "installedPath": "node_modules/@kyralabs/m3e-css",
+      "files": [
+        {
+          "path": "kyralabs-m3e-css/LICENSE",
+          "upstreamFile": "LICENSE",
+          "bytes": 11357,
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        },
+        {
+          "path": "kyralabs-m3e-css/NOTICE",
+          "upstreamFile": "NOTICE",
+          "bytes": 4245,
+          "sha256": "47b57d292ef25d00f077635054b6d5a9765d3874fc827443baedc78f54f2fed7"
+        }
+      ]
+    },
+    {
+      "package": "@kyralabs/m3e-tokens",
+      "version": "1.8.0",
+      "license": "Apache-2.0",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/kyra-labs/m3exp-web",
+        "directory": "packages/m3e-tokens"
+      },
+      "homepage": "https://github.com/kyra-labs/m3exp-web/tree/main/packages/m3e-tokens#readme",
+      "installedPath": "node_modules/@kyralabs/m3e-tokens",
+      "files": [
+        {
+          "path": "kyralabs-m3e-tokens/LICENSE",
+          "upstreamFile": "LICENSE",
+          "bytes": 11357,
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        },
+        {
+          "path": "kyralabs-m3e-tokens/NOTICE",
+          "upstreamFile": "NOTICE",
+          "bytes": 4245,
+          "sha256": "47b57d292ef25d00f077635054b6d5a9765d3874fc827443baedc78f54f2fed7"
+        }
+      ]
+    },
+    {
+      "package": "@kyralabs/m3e-elements",
+      "version": "1.8.0",
+      "license": "Apache-2.0",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/kyra-labs/m3exp-web",
+        "directory": "packages/m3e-elements"
+      },
+      "homepage": "https://github.com/kyra-labs/m3exp-web/tree/main/packages/m3e-elements#readme",
+      "installedPath": "node_modules/@kyralabs/m3e-elements",
+      "files": [
+        {
+          "path": "kyralabs-m3e-elements/LICENSE",
+          "upstreamFile": "LICENSE",
+          "bytes": 11357,
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        },
+        {
+          "path": "kyralabs-m3e-elements/NOTICE",
+          "upstreamFile": "NOTICE",
+          "bytes": 4245,
+          "sha256": "47b57d292ef25d00f077635054b6d5a9765d3874fc827443baedc78f54f2fed7"
+        }
+      ]
+    }
+  ]
+}

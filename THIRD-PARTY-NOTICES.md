@@ -18,13 +18,23 @@ future release artifacts must carry their notices; they are not present in
 | VS Code language server protocol and JSON-RPC (`vscode-languageserver-protocol`, `vscode-jsonrpc`) | 3.18.4 / 9.0.3 | MIT | https://github.com/microsoft/vscode-languageserver-node |
 | `vscode-ws-jsonrpc` | 4.0.3 | MIT | https://github.com/TypeFox/monaco-languageclient |
 | `monaco-languageserver-types` | 0.4.1 | MIT | https://github.com/remcohaszing/monaco-languageserver-types |
+| `css-tree` (build-time CSS parser; not bundled at runtime) | 3.2.1 | MIT | https://github.com/csstree/csstree |
 | M3E packages (`@kyralabs/m3e-css`, `@kyralabs/m3e-tokens`, `@kyralabs/m3e-elements`) | 1.8.0 | Apache-2.0 | https://github.com/kyra-labs/m3exp-web |
-| Google Sans Flex (font used by the M3E token package) | upstream revision | SIL Open Font License 1.1 | https://github.com/googlefonts/googlesans-flex |
+| Google Sans Flex | 5.000, source commit `bd8f81ddb5c74d5c8897b36ad88b440266245103` | SIL Open Font License 1.1 | https://github.com/google/fonts/tree/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/googlesansflex |
+| Material Symbols Rounded | locally pinned 11-glyph subset | Apache-2.0 | https://github.com/google/material-design-icons |
 | LLVM / clang / clangd (WASM engine and toolchain data) | LLVM 23.1.1 build base | Apache-2.0 WITH LLVM-exception | https://llvm.org/ · https://github.com/llvm/llvm-project |
 | Emscripten runtime and generated JavaScript glue | 6.0.9 build base | MIT and University of Illinois/NCSA Open Source License (dual) | https://emscripten.org/ · https://github.com/emscripten-core/emscripten |
 | GNU libstdc++ headers (toolchain data packs) | GCC toolchain matching the pack | GPL-3.0-or-later WITH GCC-exception-3.1 | https://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html |
 | GNU C Library headers (toolchain data packs) | glibc used by the pack | LGPL-2.1-or-later | https://www.gnu.org/software/libc/ |
 | Linux UAPI headers (toolchain data packs) | kernel headers used by the pack | GPL-2.0 WITH Linux-syscall-note; some files under BSD-3-Clause or other permissive notices | https://github.com/torvalds/linux/tree/master/include/uapi · https://github.com/torvalds/linux/tree/master/LICENSES |
+
+Original component LICENSE and NOTICE texts are packaged in
+`extension/licenses/`; `sources.json` records their source versions and hashes.
+Font licenses, trademarks and provenance are in `extension/fonts/` and
+`extension/icons/`. The Nushu subset restores the upstream `.notdef` outline
+to repair a zero-length glyph table; its exact source and old/new hashes are
+documented in `extension/fonts/PROVENANCE.txt`.
+
 
 ## Copyright notices
 
@@ -85,11 +95,10 @@ the upstream NOTICE files.
 
 ## SIL Open Font License 1.1
 
-Google Sans Flex is licensed under the SIL Open Font License, Version 1.1. The
-upstream `OFL.txt` is retained with the font distribution and is available at
-https://github.com/googlefonts/googlesansflex. The font may be bundled and
-redistributed under the OFL terms; it may not be sold by itself, and reserved
-font names must not be used for modified versions as described by the license.
+Google Sans Flex is licensed under the SIL Open Font License, Version 1.1.
+The complete text is bundled as `extension/fonts/LICENSE-google-sans-flex.txt`,
+with the upstream trademark notice alongside it. The font may not be sold by
+itself; the license's reserved-name conditions apply to modified versions.
 
 ## Emscripten
 

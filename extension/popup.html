@@ -3,115 +3,101 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MonacoAnywhere</title>
+    <title data-i18n="popup.pageTitle"></title>
+    <link rel="stylesheet" href="theme.css" />
     <style>
-      :root {
-        color-scheme: light dark;
-        --ma-bg: #fdf7ff;
-        --ma-surface: #ffffff;
-        --ma-text: #1d1b20;
-        --ma-muted: #625b71;
-        --ma-primary: #6750a4;
-        --ma-primary-text: #ffffff;
-        --ma-outline: #cac4d0;
-        --ma-error: #b3261e;
+      .ma-ui.ma-popup-page {
+        inline-size: 360px;
+        min-block-size: 0;
+        padding: 16px;
       }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --ma-bg: #141218;
-          --ma-surface: #211f26;
-          --ma-text: #e6e0e9;
-          --ma-muted: #cac4d0;
-          --ma-primary: #d0bcff;
-          --ma-primary-text: #201a2b;
-          --ma-outline: #49454f;
-          --ma-error: #f2b8b5;
-        }
+      .ma-ui [hidden] {
+        display: none !important;
       }
-      body { margin: 0; }
-      .ma-ui {
-        box-sizing: border-box;
-        width: 360px;
-        padding: 18px;
-        background: var(--ma-bg);
-        color: var(--ma-text);
-        font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+      .ma-ui .ma-popup {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
       }
-      h1 { margin: 0 0 4px; font-size: 20px; line-height: 1.2; }
-      .ma-eyebrow {
-        margin: 0 0 12px;
-        color: var(--ma-muted);
-        font-size: 12px;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
+      .ma-ui .ma-popup .ma-card {
+        gap: 10px;
       }
-      .ma-card {
-        padding: 14px;
-        border: 1px solid var(--ma-outline);
-        border-radius: 18px;
-        background: var(--ma-surface);
+      .ma-ui .ma-popup dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 8px 12px;
+        margin: 0;
       }
-      dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; margin: 0; }
-      dt { color: var(--ma-muted); }
-      dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
-      .ma-note {
-        margin: 12px 0 0;
-        color: var(--ma-muted);
-        font-size: 12px;
+      .ma-ui .ma-popup dt {
+        color: var(--m3e-sys-color-on-surface-variant);
       }
-      .ma-actions { display: grid; gap: 8px; margin-top: 14px; }
-      button {
-        min-height: 40px;
-        padding: 0 14px;
-        border: 1px solid var(--ma-outline);
-        border-radius: 999px;
-        background: transparent;
-        color: inherit;
-        font: inherit;
-        cursor: pointer;
+      .ma-ui .ma-popup dd {
+        margin: 0;
+        text-align: end;
+        overflow-wrap: anywhere;
       }
-      button.primary {
-        border-color: transparent;
-        background: var(--ma-primary);
-        color: var(--ma-primary-text);
-        font-weight: 650;
+      .ma-ui .ma-popup .ma-actions {
+        display: grid;
       }
-      button:focus-visible { outline: 3px solid var(--ma-primary); outline-offset: 2px; }
-      code {
-        padding: 1px 5px;
-        border-radius: 5px;
-        background: color-mix(in srgb, var(--ma-text) 8%, transparent);
-        font-family: ui-monospace, Consolas, monospace;
-        font-size: 11px;
+      .ma-ui .ma-popup .ma-actions .m3e-button {
+        inline-size: 100%;
       }
-      .ma-error { margin: 12px 0 0; color: var(--ma-error); font-weight: 600; }
-      .ma-id { margin: 10px 0 0; overflow-wrap: anywhere; font-size: 12px; }
+      .ma-ui .ma-loading-slot {
+        display: flex;
+        justify-content: center;
+        padding: 8px;
+      }
+      .ma-ui .ma-loading-slot:empty {
+        display: none;
+      }
     </style>
   </head>
-  <body class="ma-ui">
-    <h1>MonacoAnywhere</h1>
-    <p class="ma-eyebrow">Skeleton build · <span id="ma-popup-build">bootstrap</span></p>
+  <body class="ma-ui ma-popup-page">
+    <main class="ma-popup">
+      <header>
+        <h1 data-i18n="common.appName"></h1>
+        <p class="ma-eyebrow" id="ma-popup-build"></p>
+      </header>
 
-    <section class="ma-card" aria-label="Status">
-      <dl>
-        <dt>Backend</dt>
-        <dd id="ma-popup-backend">No backend selected</dd>
-        <dt>Content scripts</dt>
-        <dd><span id="ma-popup-registrations">…</span> registered</dd>
-      </dl>
-      <p id="ma-popup-oobe" class="ma-note">
-        Setup is incomplete. Language services are unavailable in this build.
-      </p>
-      <p class="ma-id">Extension ID: <code id="ma-popup-id"></code></p>
-    </section>
+      <section class="ma-card" data-i18n-aria-label="popup.statusAria">
+        <dl>
+          <dt data-i18n="popup.backend.label"></dt>
+          <dd id="ma-popup-backend"></dd>
+          <dt data-i18n="popup.registrations.label"></dt>
+          <dd id="ma-popup-registrations"></dd>
+        </dl>
+        <p id="ma-popup-oobe" class="ma-note"></p>
+        <p class="ma-id">
+          <span data-i18n="common.extensionId"></span>:
+          <code id="ma-popup-id"></code>
+        </p>
+      </section>
 
-    <div class="ma-actions">
-      <button id="ma-open-setup" class="primary" type="button">Open setup</button>
-      <button id="ma-open-options" type="button">Open options</button>
-      <button id="ma-open-fixture" type="button">Open Monaco fixture</button>
-    </div>
+      <div id="ma-popup-loading" class="ma-loading-slot"></div>
 
-    <div id="ma-popup-error" class="ma-error" role="alert" hidden></div>
+      <div class="ma-actions">
+        <button
+          id="ma-open-setup"
+          class="m3e-button m3e-button--size-m"
+          type="button"
+          data-i18n="popup.openSetup"
+        ></button>
+        <button
+          id="ma-open-options"
+          class="m3e-button m3e-button--outlined m3e-button--size-m"
+          type="button"
+          data-i18n="popup.openOptions"
+        ></button>
+        <button
+          id="ma-open-fixture"
+          class="m3e-button m3e-button--text m3e-button--size-m"
+          type="button"
+          data-i18n="popup.openFixture"
+        ></button>
+      </div>
+
+      <div id="ma-popup-error" class="ma-status" role="status" hidden></div>
+    </main>
 
     <script type="module" src="popup.js"></script>
   </body>

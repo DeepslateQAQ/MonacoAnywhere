@@ -16,6 +16,9 @@ import { cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { assertMatchingMessageKeySets } from "./scripts/i18n-keys.mjs";
+import { retargetTokenRoots, scopeComponentCss } from "./scripts/ui-css.mjs";
+
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const EXTENSION_DIR = path.join(ROOT, "extension");
 const DIST_DIR = path.join(ROOT, "dist");
@@ -23,6 +26,19 @@ const MANIFEST_SOURCE = path.join(EXTENSION_DIR, "manifest.json");
 const ENGINE_DIR = path.join(EXTENSION_DIR, "wasm", "dist");
 const CATALOGUE_SOURCE = path.join(EXTENSION_DIR, "src", "data", "catalogue.json");
 const EXTENSION_ID_FILE = path.join(ROOT, "extension-id.txt");
+const UI_THEME_ENTRY_SOURCE = path.join(
+  EXTENSION_DIR,
+  "src",
+  "ui",
+  "theme.css"
+);
+const MESSAGES_EN_SOURCE = path.join(EXTENSION_DIR, "src", "ui", "messages.en.ts");
+const MESSAGES_ZH_CN_SOURCE = path.join(
+  EXTENSION_DIR,
+  "src",
+  "ui",
+  "messages.zh-CN.ts"
+);
 
 const ENGINE_ARTIFACTS = [
   "clangd.wasm",
@@ -112,6 +128,151 @@ function sameStringSet(actual, expected) {
   }
   const values = new Set(actual);
   return values.size === expected.length && expected.every((item) => values.has(item));
+}
+
+/** Keep package selectors inside UI scopes and fonts on the extension origin. */
+function m3eScopedCssPlugin(extensionId) {
+  const fontDirectory = path.join(EXTENSION_DIR, "fonts");
+  const load = async (args, transform) => ({
+    contents: transform(await readFile(args.path, "utf8")),
+    loader: "css",
+    resolveDir: path.dirname(args.path)
+  });
+  return {
+    name: "ma-m3e-scoped-css",
+    setup(pluginBuild) {
+      pluginBuild.onLoad(
+        { filter: /[/\\]@kyralabs[/\\]m3e-css[/\\].*\.css$/ },
+        (args) => load(args, scopeComponentCss)
+      );
+      pluginBuild.onLoad(
+        { filter: /[/\\]@kyralabs[/\\]m3e-tokens[/\\].*\.css$|[/\\]extension[/\\]icons[/\\]material-symbols\.css$/ },
+        (args) => load(args, retargetTokenRoots)
+      );
+      pluginBuild.onResolve({ filter: /\.woff2$/ }, async (args) => {
+        if (args.kind !== "url-token" || !args.importer) return;
+        const file = path.resolve(path.dirname(args.importer), args.path);
+        const relative = path.relative(fontDirectory, file);
+        if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return;
+        await requireFile(file, "UI font");
+        return {
+          path: `chrome-extension://${extensionId}/fonts/${relative.split(path.sep).map(encodeURIComponent).join("/")}`,
+          external: true
+        };
+      });
+      pluginBuild.onResolve({ filter: /^(?:https?:)?\/\// }, (args) => {
+        if (args.kind === "import-rule" || args.kind === "url-token") {
+          return { errors: [{ text: `Remote UI CSS resources are forbidden: ${args.path}` }] };
+        }
+      });
+    }
+  };
+}
+
+/**
+ * Expose the processed, scoped UI stylesheet as a JavaScript string for the
+ * content-script shadow root. Font URLs inside it are already absolute
+ * chrome-extension:// URLs produced by esbuild's publicPath.
+ */
+function inlineCssPlugin() {
+  return {
+    name: "ma-inline-css",
+    setup(pluginBuild) {
+      pluginBuild.onResolve({ filter: /\.css\?inline$/ }, (args) => {
+        if (!args.path.startsWith(".") && !path.isAbsolute(args.path)) {
+          fail(`CSS string imports must be relative: ${args.path}`);
+        }
+        return {
+          path: path.resolve(args.resolveDir, args.path.replace(/\?inline$/u, "")),
+          namespace: "ma-inline-css"
+        };
+      });
+
+      pluginBuild.onLoad(
+        { filter: /.*/, namespace: "ma-inline-css" },
+        async (args) => {
+          if (path.basename(args.path) !== "theme.css") {
+            fail(`Only theme.css?inline is supported, got ${args.path}`);
+          }
+          const cssFile = path.join(DIST_DIR, "theme.css");
+          await requireFile(cssFile, "built theme.css for ?inline import");
+          const css = (await readFile(cssFile, "utf8")).replace(
+            /\/\*# sourceMappingURL=[\s\S]*?\*\/\s*$/u,
+            "\n"
+          );
+          return {
+            contents: `export default ${JSON.stringify(css)};`,
+            loader: "js",
+            resolveDir: path.dirname(args.path)
+          };
+        }
+      );
+    }
+  };
+}
+
+async function loadMessageTableKeys(file, label) {
+  await requireFile(file, label);
+  let outputFile;
+  try {
+    const result = await build({
+      entryPoints: [file],
+      bundle: true,
+      write: false,
+      format: "esm",
+      platform: "neutral",
+      target: ["es2022"],
+      logLevel: "silent"
+    });
+    outputFile = result.outputFiles[0];
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    fail(`Could not bundle ${label} for i18n validation: ${message}`);
+  }
+
+  assert(
+    outputFile,
+    `Could not produce a JavaScript module for ${label} during i18n validation`
+  );
+
+  let moduleNamespace;
+  try {
+    moduleNamespace = await import(
+      `data:text/javascript;base64,${Buffer.from(outputFile.contents).toString(
+        "base64"
+      )}`
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    fail(`Could not evaluate ${label} for i18n validation: ${message}`);
+  }
+
+  const messages = moduleNamespace.messages;
+  assert(
+    messages && typeof messages === "object" && !Array.isArray(messages),
+    `${label} must export a messages object`
+  );
+  return Object.keys(messages);
+}
+
+async function validateI18nMessages() {
+  const enKeys = await loadMessageTableKeys(
+    MESSAGES_EN_SOURCE,
+    "messages.en.ts"
+  );
+  const zhKeys = await loadMessageTableKeys(
+    MESSAGES_ZH_CN_SOURCE,
+    "messages.zh-CN.ts"
+  );
+
+  try {
+    assertMatchingMessageKeySets(enKeys, zhKeys, {
+      enLabel: "messages.en.ts",
+      zhLabel: "messages.zh-CN.ts"
+    });
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
 }
 
 function parseArgs(argv) {
@@ -249,6 +410,8 @@ async function validateDependencies() {
 }
 
 async function validateStaticAssets() {
+  await requireFile(UI_THEME_ENTRY_SOURCE, "UI theme stylesheet entry");
+  await requireFile(path.join(EXTENSION_DIR, "licenses", "sources.json"), "third-party license inventory");
   for (const page of HTML_PAGES) {
     await requireFile(path.join(EXTENSION_DIR, page), `extension page ${page}`);
   }
@@ -412,7 +575,7 @@ async function writeManifest(manifest, version) {
   );
 }
 
-async function runEsbuild({ bootstrap, version }) {
+async function runEsbuild({ bootstrap, version, extensionId }) {
   const define = {
     __MA_BUILD_MODE__: JSON.stringify(bootstrap ? "bootstrap" : "production"),
     __MA_BOOTSTRAP__: String(bootstrap),
@@ -427,6 +590,8 @@ async function runEsbuild({ bootstrap, version }) {
     legalComments: "eof",
     charset: "utf8",
     define,
+    publicPath: `chrome-extension://${extensionId}/`,
+    plugins: [m3eScopedCssPlugin(extensionId), inlineCssPlugin()],
     loader: {
       ".ttf": "file",
       ".woff": "file",
@@ -436,6 +601,15 @@ async function runEsbuild({ bootstrap, version }) {
     },
     assetNames: "assets/[name]-[hash]"
   };
+
+  // Build the scoped UI stylesheet first: the content-script bundle may import
+  // the processed CSS as a string for its shadow root.
+  await build({
+    ...common,
+    entryPoints: { theme: UI_THEME_ENTRY_SOURCE },
+    outdir: DIST_DIR,
+    entryNames: "[name]"
+  });
 
   await build({
     ...common,
@@ -481,6 +655,7 @@ async function runEsbuild({ bootstrap, version }) {
     "background.js",
     "editor.js",
     "editor.css",
+    "theme.css",
     "onboarding.js",
     "options.js",
     "popup.js",
@@ -527,6 +702,7 @@ async function main() {
 
   await validateDependencies();
   await validateStaticAssets();
+  await validateI18nMessages();
 
   let engineResult = null;
   if (!bootstrap) {
@@ -545,6 +721,7 @@ async function main() {
   });
   await copyIfDirectory(path.join(EXTENSION_DIR, "assets"), path.join(DIST_DIR, "assets"));
   await copyIfDirectory(path.join(EXTENSION_DIR, "fonts"), path.join(DIST_DIR, "fonts"));
+  await cp(path.join(EXTENSION_DIR, "licenses"), path.join(DIST_DIR, "licenses"), { recursive: true });
 
   for (const file of ["LICENSE", "THIRD-PARTY-NOTICES.md"]) {
     const source = path.join(ROOT, file);
@@ -573,7 +750,7 @@ async function main() {
     await cp(CATALOGUE_SOURCE, path.join(dataTarget, "catalogue.json"));
   }
 
-  await runEsbuild({ bootstrap, version });
+  await runEsbuild({ bootstrap, version, extensionId });
 
   const buildInfo = {
     mode,

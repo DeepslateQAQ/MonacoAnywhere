@@ -6,7 +6,12 @@
  * The page preserves onboardingComplete and never invents a successful check.
  */
 
+import { setLocale, t } from "../ui/i18n.js";
+import { loadingIndicator, setStatus } from "../ui/primitives.js";
+
 const SETTINGS_KEY = "settings:v1";
+const MIN_PAUSE_MS = 1000;
+const MAX_PAUSE_MS = 86_400_000;
 const DEFAULT_SETTINGS: MaSettings = {
   backend: null,
   siteBackends: {},
@@ -19,6 +24,9 @@ const DEFAULT_SETTINGS: MaSettings = {
   editorTheme: "vs-dark",
   onboardingComplete: false
 };
+
+// Browser locale first, then the stored explicit preference in initialise().
+setLocale("auto");
 
 function requireElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -48,22 +56,43 @@ function parseList(value: string): string[] {
   ];
 }
 
-function setStatus(message: string, isError: boolean): void {
-  const status = requireElement("ma-options-status");
-  const error = requireElement("ma-options-error");
-  status.textContent = "";
-  status.hidden = true;
-  error.textContent = "";
-  error.hidden = true;
-  if (message.length === 0) {
+function showStatus(kind: "info" | "error", text: string): void {
+  const node = requireElement("ma-options-status");
+  setStatus(node, { kind, text });
+  node.hidden = text.length === 0;
+}
+
+function backendLabel(backend: MaBackendChoice | null): string {
+  if (backend === "wasm") {
+    return t("options.backend.wasm");
+  }
+  if (backend === "native") {
+    return t("options.backend.native");
+  }
+  return t("options.backend.none");
+}
+
+function buildModeLabel(): string {
+  return t(
+    __MA_BOOTSTRAP__ ? "build.mode.bootstrap" : "build.mode.production"
+  );
+}
+
+function renderHeader(): void {
+  requireElement("ma-build-mode").textContent = t("options.eyebrow", {
+    mode: buildModeLabel()
+  });
+}
+
+function applyThemePreference(theme: MaTheme): void {
+  const root = document.querySelector<HTMLElement>(".ma-ui");
+  if (!root) {
     return;
   }
-  if (isError) {
-    error.textContent = message;
-    error.hidden = false;
+  if (theme === "light" || theme === "dark") {
+    root.dataset.theme = theme;
   } else {
-    status.textContent = message;
-    status.hidden = false;
+    delete root.dataset.theme;
   }
 }
 
@@ -87,114 +116,152 @@ function fillForm(settings: MaSettings): void {
   const oobe = requireElement("ma-oobe-state");
   oobe.textContent =
     settings.backend === null
-      ? "No backend selected. Setup is incomplete and language services are unavailable in this build."
-      : `Backend preference: ${settings.backend}. onboardingComplete=${String(
-          settings.onboardingComplete
-        )}. This skeleton build cannot validate either backend.`;
+      ? t("options.state.none")
+      : t("options.state.backend", {
+          backend: backendLabel(settings.backend),
+          complete: String(settings.onboardingComplete)
+        });
+}
+
+async function savePreferences(): Promise<void> {
+  showStatus("info", "");
+
+  const backendValue = requireElement<HTMLSelectElement>("ma-backend").value;
+  if (backendValue !== "" && backendValue !== "wasm" && backendValue !== "native") {
+    showStatus("error", t("options.error.unsupportedBackend"));
+    return;
+  }
+  const backend: MaBackendChoice | null =
+    backendValue === "wasm" || backendValue === "native" ? backendValue : null;
+
+  const themeValue = requireElement<HTMLSelectElement>("ma-theme").value;
+  const theme: MaTheme =
+    themeValue === "light" || themeValue === "dark" || themeValue === "system"
+      ? themeValue
+      : "system";
+
+  const localeValue = requireElement<HTMLSelectElement>("ma-locale").value;
+  const locale: MaLocale =
+    localeValue === "zh-CN" || localeValue === "en" || localeValue === "auto"
+      ? localeValue
+      : "auto";
+
+  const hiddenPauseMs = Number.parseInt(
+    requireElement<HTMLInputElement>("ma-hidden-pause").value,
+    10
+  );
+  if (
+    !Number.isInteger(hiddenPauseMs) ||
+    hiddenPauseMs < MIN_PAUSE_MS ||
+    hiddenPauseMs > MAX_PAUSE_MS
+  ) {
+    showStatus(
+      "error",
+      t("options.error.pauseRange", {
+        min: MIN_PAUSE_MS,
+        max: MAX_PAUSE_MS
+      })
+    );
+    return;
+  }
+
+  const clangdPath = requireElement<HTMLInputElement>("ma-clangd-path").value.trim();
+  const patch: Partial<MaSettings> = {
+    backend,
+    theme,
+    locale,
+    hiddenPauseMs,
+    queryDriverAllowlist: parseList(
+      requireElement<HTMLTextAreaElement>("ma-query-driver").value
+    ),
+    extraIncludeDirs: parseList(
+      requireElement<HTMLTextAreaElement>("ma-extra-includes").value
+    ),
+    editorFontFamily:
+      requireElement<HTMLInputElement>("ma-editor-font").value.trim() ||
+      DEFAULT_SETTINGS.editorFontFamily,
+    editorTheme:
+      requireElement<HTMLInputElement>("ma-editor-theme").value.trim() ||
+      DEFAULT_SETTINGS.editorTheme
+  };
+
+  try {
+    const current = await readSettings();
+    const next: MaSettings = { ...current, ...patch };
+    if (clangdPath.length === 0) {
+      delete next.clangdPath;
+    } else {
+      next.clangdPath = clangdPath;
+    }
+    await chrome.storage.local.set({ [SETTINGS_KEY]: next });
+    setLocale(next.locale);
+    applyThemePreference(next.theme);
+    renderHeader();
+    fillForm(next);
+    showStatus("info", t("options.info.saved"));
+  } catch (error: unknown) {
+    showStatus(
+      "error",
+      t("options.error.save", { error: String(error) })
+    );
+  }
+}
+
+async function openSetup(): Promise<void> {
+  await chrome.tabs.create({ url: chrome.runtime.getURL("onboarding.html") });
 }
 
 async function initialise(): Promise<void> {
   const settings = await readSettings();
+  setLocale(settings.locale);
+  applyThemePreference(settings.theme);
+
   fillForm(settings);
-  requireElement("ma-build-mode").textContent =
-    `${__MA_BUILD_MODE__} · ${__MA_BUILD_VERSION__}`;
+  renderHeader();
   requireElement("ma-extension-id").textContent = chrome.runtime.id;
 
   const form = requireElement<HTMLFormElement>("ma-options-form");
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    setStatus("", false);
-
-    const backendValue = requireElement<HTMLSelectElement>("ma-backend").value;
-    if (backendValue !== "" && backendValue !== "wasm" && backendValue !== "native") {
-      setStatus("Unsupported backend selection.", true);
-      return;
-    }
-    const backend: MaBackendChoice | null =
-      backendValue === "wasm" || backendValue === "native" ? backendValue : null;
-
-    const themeValue = requireElement<HTMLSelectElement>("ma-theme").value;
-    const theme: MaTheme =
-      themeValue === "light" || themeValue === "dark" || themeValue === "system"
-        ? themeValue
-        : "system";
-
-    const localeValue = requireElement<HTMLSelectElement>("ma-locale").value;
-    const locale: MaLocale =
-      localeValue === "zh-CN" || localeValue === "en" || localeValue === "auto"
-        ? localeValue
-        : "auto";
-
-    const hiddenPauseMs = Number.parseInt(
-      requireElement<HTMLInputElement>("ma-hidden-pause").value,
-      10
-    );
-    if (
-      !Number.isInteger(hiddenPauseMs) ||
-      hiddenPauseMs < 1000 ||
-      hiddenPauseMs > 86_400_000
-    ) {
-      setStatus("Pause delay must be an integer between 1000 and 86400000 ms.", true);
-      return;
-    }
-
-    const clangdPath = requireElement<HTMLInputElement>("ma-clangd-path").value.trim();
-    const patch: Partial<MaSettings> = {
-      backend,
-      theme,
-      locale,
-      hiddenPauseMs,
-      queryDriverAllowlist: parseList(
-        requireElement<HTMLTextAreaElement>("ma-query-driver").value
-      ),
-      extraIncludeDirs: parseList(
-        requireElement<HTMLTextAreaElement>("ma-extra-includes").value
-      ),
-      editorFontFamily:
-        requireElement<HTMLInputElement>("ma-editor-font").value.trim() ||
-        DEFAULT_SETTINGS.editorFontFamily,
-      editorTheme:
-        requireElement<HTMLInputElement>("ma-editor-theme").value.trim() ||
-        DEFAULT_SETTINGS.editorTheme
-    };
-
-    void readSettings()
-      .then((current) => {
-        const next: MaSettings = { ...current, ...patch };
-        if (clangdPath.length === 0) {
-          delete next.clangdPath;
-        } else {
-          next.clangdPath = clangdPath;
-        }
-        return chrome.storage.local
-          .set({ [SETTINGS_KEY]: next })
-          .then(() => next);
-      })
-      .then((next) => {
-        fillForm(next);
-        setStatus(
-          "Preferences saved locally. No backend was validated; OOBE remains incomplete in this build.",
-          false
-        );
-      })
-      .catch((error: unknown) => {
-        setStatus(`Could not save preferences: ${String(error)}`, true);
-      });
+    void savePreferences().catch((error: unknown) => {
+      showStatus(
+        "error",
+        t("options.error.save", { error: String(error) })
+      );
+    });
   });
 
   requireElement("ma-open-setup").addEventListener("click", () => {
-    void chrome.tabs
-      .create({ url: chrome.runtime.getURL("onboarding.html") })
-      .catch((error: unknown) => {
-        setStatus(`Could not open setup: ${String(error)}`, true);
-      });
+    void openSetup().catch((error: unknown) => {
+      showStatus(
+        "error",
+        t("options.error.openSetup", { error: String(error) })
+      );
+    });
   });
 }
 
-void initialise().catch((error: unknown) => {
-  const errorNode = document.getElementById("ma-options-error");
-  if (errorNode) {
-    errorNode.textContent = `Options failed to initialise: ${String(error)}`;
-    errorNode.hidden = false;
-  }
-});
+const loadingSlot = document.getElementById("ma-options-loading");
+if (loadingSlot) {
+  loadingSlot.append(
+    loadingIndicator({
+      label: t("options.loading"),
+      contained: true
+    })
+  );
+}
+
+void initialise()
+  .catch((error: unknown) => {
+    const errorNode = document.getElementById("ma-options-status");
+    if (errorNode) {
+      setStatus(errorNode, {
+        kind: "error",
+        text: t("options.error.init", { error: String(error) })
+      });
+      errorNode.hidden = false;
+    }
+  })
+  .finally(() => {
+    loadingSlot?.replaceChildren();
+  });

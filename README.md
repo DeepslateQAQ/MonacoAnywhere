@@ -6,13 +6,12 @@ The project is licensed `AGPL-3.0-only`.
 
 > **Current status: bootstrap build, not a release.**
 >
-> This repository currently contains the Phase 1 skeleton: a loadable MV3
-> extension, stable extension ID, dynamic content-script registration,
-> settings/navigation pages, and a working Monaco fixture with C++ syntax
-> highlighting. It does **not** contain the WASM engine, the native host, data
-> packs, OJ site adapters, drafts, LSP sessions, or OOBE validation. The UI
-> states that language services are unavailable; nothing claims a successful
-> engine or OOBE check.
+> This repository currently contains a loadable MV3 bootstrap: stable extension
+> ID, dynamic content-script registration, scoped offline Material 3 Expressive
+> pages, and a working Monaco fixture with C++ syntax highlighting.
+> It does **not** yet contain the WASM engine, native host, data packs, OJ
+> adapters, drafts, LSP sessions, or real OOBE validation. Language services are
+> explicitly unavailable; no engine or OOBE success is simulated.
 
 ## What works in this build
 
@@ -21,6 +20,8 @@ The project is licensed `AGPL-3.0-only`.
 - Extension pages (`onboarding.html`, `options.html`, `popup.html`) can read and
   save the local `settings:v1` preference object. Onboarding deliberately has no
   backend preselected and cannot write `onboardingComplete`.
+- Shared Material 3 Expressive controls use native HTML semantics, self-hosted
+  fonts, and Simplified Chinese/English messages. UI styles do not target Monaco.
 - The service worker registers MAIN-world and ISOLATED-world content scripts
   dynamically. Fixed OJ origins come from `manifest.json`; manually approved
   origins are read from `siteRegistrations:v1` and intersected with granted
@@ -35,8 +36,7 @@ The project is licensed `AGPL-3.0-only`.
 - WASM clangd engine, source-rebuilt runtime, resource headers, and toolchain
   data packs.
 - Native Go host, clangd discovery, Native Messaging, and loopback WebSocket.
-- OJ adapters, editor takeover, language mapping/synchronisation, drafts, and
-  the M3E shared UI layer.
+- OJ adapters, editor takeover, language mapping/synchronisation, and drafts.
 - LSP providers, diagnostics, workspace edits, header navigation, and the
   offscreen session owner. The offscreen document exists only as a status
   placeholder and reports `engine: "unavailable"`.
@@ -95,6 +95,16 @@ worked, and the ten declared MAIN/ISOLATED registrations used only their
 dedicated site matches. Production builds rejected the absent engine.
 These checks do not establish full clangd or OJ compatibility.
 
+Shared UI modules live in `extension/src/ui/`. Use `theme.css?inline` for shadow
+roots; its processed font URLs stay on the extension origin. For asynchronous
+dialogs outside a focused toolbar, pass `{ host: shadowRoot }` to `openDialog`.
+Native dialog cancellation/focus restoration, light/dark token inheritance,
+button press morphing, and the loading indicator's static reduced-motion frame
+were exercised in Chromium. `pnpm exec vitest run tests/i18n.test.ts` covers key
+compatibility, locale selection, and interpolation; missing translations also
+abort the build.
+
+
 ## Production build gate
 
 ```sh
@@ -136,6 +146,8 @@ readiness. The WASM spike and session integration are later phases.
 | `content-main.js` | MAIN-world closed bridge baseline |
 | `editor.js`, `editor.css` | Monaco fixture / future replacement editor page |
 | `onboarding.js`, `options.js`, `popup.js`, `offscreen.js` | Extension pages |
+| `theme.css`, `fonts/` | Scoped M3E stylesheet and offline font assets |
+| `licenses/` | Original component licenses/NOTICES and hashed provenance |
 | `workers/editor.worker.js`, `workers/ts.worker.js` | Monaco workers, loaded via `chrome.runtime.getURL` with `{ type: "module" }` |
 | `manifest.json` | Source manifest with the package version injected |
 | `icons/` | Extension icons |
@@ -216,6 +228,9 @@ extension/
   manifest.json                         MV3 manifest with stable public key
   editor.html … offscreen.html          extension pages
   icons/                                extension icons
+  fonts/                                self-hosted fonts and provenance
+  licenses/                             original upstream licenses and notices
+  src/ui/                               scoped M3E primitives and i18n
   src/background/index.ts               service worker registration/onboarding
   src/content/index.ts                  status-only ISOLATED entry
   src/page-adapter/index.ts             closed MAIN-world bridge baseline
@@ -230,8 +245,8 @@ LICENSE                                  AGPL-3.0-only full text
 THIRD-PARTY-NOTICES.md                   dependency, engine, and data notices
 ```
 
-The native Go host, Hydro patch kit, WASM source fork, site adapters, LSP layer,
-data loader, and tests are later slices.
+The native Go host, Hydro patch kit, WASM fork, site adapters, LSP layer, data
+loader, and their test suites remain later slices.
 
 ## License
 

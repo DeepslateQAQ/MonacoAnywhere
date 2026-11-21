@@ -3,52 +3,44 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MonacoAnywhere editor</title>
+    <title data-i18n="editor.pageTitle"></title>
     <link rel="stylesheet" href="editor.css" />
+    <link rel="stylesheet" href="theme.css" />
     <style>
-      :root { color-scheme: dark light; }
-      html, body { height: 100%; }
-      body {
-        margin: 0;
+      .ma-editor-page {
         display: flex;
         flex-direction: column;
-        background: #1e1e1e;
-        color: #e6e0e9;
-        font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+        block-size: 100vh;
+        margin: 0;
+        overflow: hidden;
+        background: #ffffff;
       }
-      @media (prefers-color-scheme: light) {
-        body { background: #ffffff; color: #1d1b20; }
-        .ma-ui { border-color: #d8d2dc; }
+      @media (prefers-color-scheme: dark) {
+        .ma-editor-page {
+          background: #1e1e1e;
+        }
       }
-      .ma-ui {
-        box-sizing: border-box;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 4px 16px;
-        padding: 8px 14px;
-        border-bottom: 1px solid #3c3c40;
+      .ma-editor-page > .ma-editor-header {
+        flex: 0 0 auto;
       }
-      .ma-ui h1 { margin: 0; font-size: 13px; font-weight: 650; letter-spacing: 0.01em; }
-      .ma-status { margin: 0; color: #b9b2be; max-width: 110ch; }
-      #ma-editor {
+      .ma-editor-page > .ma-editor-header .ma-status {
+        margin: 0;
+      }
+      .ma-editor-host {
         flex: 1 1 auto;
-        min-height: 0;
-      }
-      @media (prefers-color-scheme: light) {
-        .ma-status { color: #625b71; }
+        min-block-size: 0;
       }
     </style>
   </head>
-  <body>
-    <header class="ma-ui">
-      <h1 id="ma-editor-title">MonacoAnywhere editor fixture</h1>
-      <p id="ma-editor-status" class="ma-status" role="status">
-        Language services are unavailable in this build.
-      </p>
-    </header>
-    <div id="ma-editor" data-monaco-anywhere-editor></div>
+  <body class="ma-editor-page">
+    <div class="ma-ui ma-editor-header">
+      <header class="ma-toolbar">
+        <h1 id="ma-editor-title"></h1>
+        <span class="ma-toolbar__spacer" aria-hidden="true"></span>
+        <p id="ma-editor-status" class="ma-status" role="status"></p>
+      </header>
+    </div>
+    <div id="ma-editor" class="ma-editor-host" data-monaco-anywhere-editor></div>
     <script type="module" src="editor.js"></script>
   </body>
 </html>

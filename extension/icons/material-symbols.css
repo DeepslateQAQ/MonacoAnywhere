@@ -1,0 +1,44 @@
+/*
+ * Material Symbols Rounded, local subset.
+ *
+ * Upstream: Material Symbols 2.975, variablefont commit
+ * 49d4db35df873165d6bd6ba09b063c7dafbac2f4.
+ * Upstream CSS2 source: fonts.googleapis.com (icon_names subset request).
+ * Local font: ../fonts/material-symbols-rounded-subset.woff2
+ * License: Apache-2.0, see LICENSE-material-symbols.txt.
+ *
+ * The subset is requested at build time from the official Google Fonts CSS2
+ * API and committed here; no runtime request is made.
+ * Glyphs: code, settings, download, check, close, error, info, pause,
+ * play_arrow, terminal, sync.
+ */
+@font-face {
+  font-family: "Material Symbols Rounded";
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: block;
+  src: url("../fonts/material-symbols-rounded-subset.woff2") format("woff2");
+}
+
+@layer m3e.tokens {
+  :root {
+    --m3e-ref-typeface-icon: "Material Symbols Rounded";
+  }
+}
+
+:where(.ma-ui) .material-symbols-rounded {
+  font-family: "Material Symbols Rounded";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+}

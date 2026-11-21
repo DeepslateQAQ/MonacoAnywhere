@@ -7,6 +7,9 @@
  * onboardingComplete.
  */
 
+import { setLocale, t, type MessageKey } from "../ui/i18n.js";
+import { el, setStatus } from "../ui/primitives.js";
+
 const SETTINGS_KEY = "settings:v1";
 const DEFAULT_SETTINGS: MaSettings = {
   backend: null,
@@ -20,6 +23,9 @@ const DEFAULT_SETTINGS: MaSettings = {
   editorTheme: "vs-dark",
   onboardingComplete: false
 };
+
+// Browser locale first, then the stored explicit preference in initialise().
+setLocale("auto");
 
 function requireElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -64,25 +70,14 @@ function setRadio(backend: MaBackendChoice | null): void {
   });
 }
 
+function showStatus(kind: "info" | "error", text: string): void {
+  const node = requireElement("ma-onboarding-status");
+  setStatus(node, { kind, text });
+  node.hidden = text.length === 0;
+}
+
 function clearStatus(): void {
-  const status = requireElement("ma-onboarding-status");
-  status.textContent = "";
-  status.hidden = true;
-  const error = requireElement("ma-onboarding-error");
-  error.textContent = "";
-  error.hidden = true;
-}
-
-function setStatus(message: string): void {
-  const status = requireElement("ma-onboarding-status");
-  status.textContent = message;
-  status.hidden = message.length === 0;
-}
-
-function setError(message: string): void {
-  const error = requireElement("ma-onboarding-error");
-  error.textContent = message;
-  error.hidden = message.length === 0;
+  showStatus("info", "");
 }
 
 function showStep(step: 1 | 2 | 3): void {
@@ -98,63 +93,83 @@ function showStep(step: 1 | 2 | 3): void {
     }
   }
   clearStatus();
-  setError("");
+}
+
+function backendTitleKey(backend: MaBackendChoice): MessageKey {
+  return backend === "wasm"
+    ? "onboarding.guidance.wasm.title"
+    : "onboarding.guidance.native.title";
 }
 
 function renderBackendGuidance(backend: MaBackendChoice): void {
   const guidance = requireElement("ma-backend-guidance");
-  guidance.replaceChildren();
+  const heading = el("h3", {}, [t(backendTitleKey(backend))]);
+  const first = el("p", {}, [
+    t(
+      backend === "wasm"
+        ? "onboarding.guidance.wasm.first"
+        : "onboarding.guidance.native.first"
+    )
+  ]);
+  const second = el("p", {}, [
+    t(
+      backend === "wasm"
+        ? "onboarding.guidance.wasm.second"
+        : "onboarding.guidance.native.second"
+    )
+  ]);
 
-  const heading = document.createElement("h3");
-  heading.textContent = backend === "wasm" ? "WASM backend" : "Native backend";
-
-  const first = document.createElement("p");
-  if (backend === "wasm") {
-    first.textContent =
-      "The WASM clangd engine and toolchain data packs are not part of this skeleton build, so no download or fixture validation is attempted.";
-  } else {
-    first.textContent =
-      "Install the native host from host/dist with this extension ID, then select the native backend in options. The host, clangd detection, and language services are not implemented in this slice.";
-  }
-
-  const second = document.createElement("p");
-  if (backend === "wasm") {
-    second.textContent =
-      "When the engine exists, the setup flow will download the data pack with a visible progress indicator and verify its SHA-256 before use.";
-  } else {
-    second.textContent =
-      "Detection is intentionally unavailable here. A future step will run the real host check and report the detected clangd version.";
-  }
-
-  guidance.append(heading, first);
-
+  const content: Array<Node | string> = [heading, first];
   if (backend === "native") {
-    const idLine = document.createElement("p");
-    idLine.className = "code-line";
-    idLine.append("Extension ID: ");
-    const code = document.createElement("code");
-    code.textContent = chrome.runtime.id;
-    idLine.append(code);
-    guidance.append(idLine);
+    content.push(
+      el("p", { class: "ma-meta" }, [
+        `${t("common.extensionId")}: `,
+        el("code", {}, [chrome.runtime.id])
+      ])
+    );
   }
-
-  guidance.append(second);
+  content.push(second);
+  guidance.replaceChildren(...content);
 }
 
 function renderValidationStep(backend: MaBackendChoice | null): void {
-  const status = requireElement("ma-validation-status");
-  status.textContent =
+  requireElement("ma-validation-description").textContent = t(
+    "onboarding.validation.description",
+    { method: "textDocument/completion" }
+  );
+  requireElement("ma-validation-status").textContent =
     backend === null
-      ? "Choose a backend first. Validation remains unavailable in this skeleton build."
-      : "Validation is intentionally unavailable: no clangd engine or data pack is present, and no fixture request has been sent. Setup cannot be completed in this build.";
+      ? t("onboarding.validation.chooseBackend")
+      : t("onboarding.validation.unavailable");
 }
 
 async function openOptions(): Promise<void> {
   await chrome.runtime.openOptionsPage();
 }
 
+function buildModeLabel(): string {
+  return t(
+    __MA_BOOTSTRAP__ ? "build.mode.bootstrap" : "build.mode.production"
+  );
+}
+
+function applyThemePreference(theme: MaTheme): void {
+  const root = document.querySelector<HTMLElement>(".ma-ui");
+  if (!root) {
+    return;
+  }
+  if (theme === "light" || theme === "dark") {
+    root.dataset.theme = theme;
+  } else {
+    delete root.dataset.theme;
+  }
+}
+
 async function initialise(): Promise<void> {
   const settings = await readSettings();
+  setLocale(settings.locale);
+  applyThemePreference(settings.theme);
+
   const storedBackend = settings.backend;
   setRadio(storedBackend);
   if (storedBackend !== null) {
@@ -162,13 +177,14 @@ async function initialise(): Promise<void> {
   }
   renderValidationStep(storedBackend);
 
-  requireElement("ma-build-mode").textContent =
-    `${__MA_BUILD_MODE__} · ${__MA_BUILD_VERSION__}`;
+  requireElement("ma-build-mode").textContent = t("onboarding.eyebrow", {
+    mode: buildModeLabel()
+  });
 
   requireElement("ma-next-1").addEventListener("click", () => {
     const backend = selectedBackend();
     if (backend === null) {
-      setError("Select a backend before continuing. No backend is preselected.");
+      showStatus("error", t("onboarding.error.selectBackend"));
       return;
     }
     void writeSettings({ backend })
@@ -176,12 +192,13 @@ async function initialise(): Promise<void> {
         renderBackendGuidance(backend);
         renderValidationStep(backend);
         showStep(2);
-        setStatus(
-          "Backend choice saved. This does not complete setup: validation is unavailable in this build."
-        );
+        showStatus("info", t("onboarding.info.saved"));
       })
       .catch((error: unknown) => {
-        setError(`Could not save the backend choice: ${String(error)}`);
+        showStatus(
+          "error",
+          t("onboarding.error.save", { error: String(error) })
+        );
       });
   });
 
@@ -197,21 +214,25 @@ async function initialise(): Promise<void> {
   });
   requireElement("ma-open-options").addEventListener("click", () => {
     void openOptions().catch((error: unknown) => {
-      setError(`Could not open options: ${String(error)}`);
+      showStatus(
+        "error",
+        t("onboarding.error.openOptions", { error: String(error) })
+      );
     });
   });
 
   if (settings.onboardingComplete) {
-    setStatus(
-      "Storage reports onboardingComplete=true, but this skeleton build cannot validate it. No new completion is written."
-    );
+    showStatus("info", t("onboarding.info.completeStored"));
   }
 }
 
 void initialise().catch((error: unknown) => {
-  const errorNode = document.getElementById("ma-onboarding-error");
+  const errorNode = document.getElementById("ma-onboarding-status");
   if (errorNode) {
-    errorNode.textContent = `Onboarding failed to initialise: ${String(error)}`;
+    setStatus(errorNode, {
+      kind: "error",
+      text: t("onboarding.error.init", { error: String(error) })
+    });
     errorNode.hidden = false;
   }
 });

@@ -3,7 +3,13 @@
  * engine, request permissions, or validate a backend.
  */
 
+import { setLocale, t } from "../ui/i18n.js";
+import { loadingIndicator, setStatus } from "../ui/primitives.js";
+
 const SETTINGS_KEY = "settings:v1";
+
+// Browser locale first, then the stored explicit preference in render().
+setLocale("auto");
 
 function requireElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -11,6 +17,53 @@ function requireElement<T extends HTMLElement>(id: string): T {
     throw new Error(`Missing popup element #${id}`);
   }
   return element as T;
+}
+
+function buildModeLabel(): string {
+  return t(
+    __MA_BOOTSTRAP__ ? "build.mode.bootstrap" : "build.mode.production"
+  );
+}
+
+function backendLabel(backend: MaBackendChoice | null): string {
+  if (backend === "wasm") {
+    return t("popup.backend.wasm");
+  }
+  if (backend === "native") {
+    return t("popup.backend.native");
+  }
+  return t("popup.backend.none");
+}
+
+function applyThemePreference(theme: MaTheme): void {
+  const root = document.querySelector<HTMLElement>(".ma-ui");
+  if (!root) {
+    return;
+  }
+  if (theme === "light" || theme === "dark") {
+    root.dataset.theme = theme;
+  } else {
+    delete root.dataset.theme;
+  }
+}
+
+function showError(
+  key:
+    | "popup.error.openSetup"
+    | "popup.error.openOptions"
+    | "popup.error.openFixture"
+    | "popup.error.init",
+  error: unknown
+): void {
+  const node = document.getElementById("ma-popup-error");
+  if (!node) {
+    return;
+  }
+  setStatus(node, {
+    kind: "error",
+    text: t(key, { error: String(error) })
+  });
+  node.hidden = false;
 }
 
 async function render(): Promise<void> {
@@ -21,21 +74,31 @@ async function render(): Promise<void> {
       ? (raw as Partial<MaSettings>)
       : {};
 
-  const backend = settings.backend;
-  const backendLabel =
-    backend === "wasm"
-      ? "WASM clangd"
-      : backend === "native"
-        ? "Local clangd"
-        : "No backend selected";
+  const locale: MaLocale =
+    settings.locale === "zh-CN" ||
+    settings.locale === "en" ||
+    settings.locale === "auto"
+      ? settings.locale
+      : "auto";
+  const theme: MaTheme =
+    settings.theme === "light" ||
+    settings.theme === "dark" ||
+    settings.theme === "system"
+      ? settings.theme
+      : "system";
+  setLocale(locale);
+  applyThemePreference(theme);
 
-  requireElement("ma-popup-backend").textContent = backendLabel;
+  const backend = settings.backend ?? null;
+  requireElement("ma-popup-backend").textContent = backendLabel(backend);
   requireElement("ma-popup-oobe").textContent =
     settings.onboardingComplete === true
-      ? "Storage says onboardingComplete=true, but this skeleton build cannot validate it."
-      : "Setup is incomplete. Language services are unavailable in this build.";
-  requireElement("ma-popup-build").textContent =
-    `${__MA_BUILD_MODE__} · ${__MA_BUILD_VERSION__}`;
+      ? t("popup.oobe.stored")
+      : t("popup.oobe.incomplete");
+  requireElement("ma-popup-build").textContent = t("popup.eyebrow", {
+    mode: buildModeLabel(),
+    version: __MA_BUILD_VERSION__
+  });
   requireElement("ma-popup-id").textContent = chrome.runtime.id;
 
   try {
@@ -44,9 +107,13 @@ async function render(): Promise<void> {
       (script) =>
         script.id.startsWith("ma-main:") || script.id.startsWith("ma-iso:")
     ).length;
-    requireElement("ma-popup-registrations").textContent = String(count);
+    requireElement("ma-popup-registrations").textContent = t(
+      "popup.registrations.count",
+      { count }
+    );
   } catch {
-    requireElement("ma-popup-registrations").textContent = "unavailable";
+    requireElement("ma-popup-registrations").textContent =
+      t("common.unavailable");
   }
 
   requireElement("ma-open-setup").addEventListener("click", () => {
@@ -54,10 +121,7 @@ async function render(): Promise<void> {
       .create({ url: chrome.runtime.getURL("onboarding.html") })
       .then(() => window.close())
       .catch((error: unknown) => {
-        requireElement("ma-popup-error").textContent = `Could not open setup: ${String(
-          error
-        )}`;
-        requireElement("ma-popup-error").hidden = false;
+        showError("popup.error.openSetup", error);
       });
   });
 
@@ -66,10 +130,7 @@ async function render(): Promise<void> {
       .openOptionsPage()
       .then(() => window.close())
       .catch((error: unknown) => {
-        requireElement("ma-popup-error").textContent = `Could not open options: ${String(
-          error
-        )}`;
-        requireElement("ma-popup-error").hidden = false;
+        showError("popup.error.openOptions", error);
       });
   });
 
@@ -78,18 +139,27 @@ async function render(): Promise<void> {
       .create({ url: chrome.runtime.getURL("editor.html?fixture=1") })
       .then(() => window.close())
       .catch((error: unknown) => {
-        requireElement("ma-popup-error").textContent = `Could not open fixture: ${String(
-          error
-        )}`;
-        requireElement("ma-popup-error").hidden = false;
+        showError("popup.error.openFixture", error);
       });
   });
 }
 
-void render().catch((error: unknown) => {
-  const node = document.getElementById("ma-popup-error");
-  if (node) {
-    node.textContent = `Popup failed to initialise: ${String(error)}`;
-    node.hidden = false;
+const loadingSlot = document.getElementById("ma-popup-loading");
+if (loadingSlot) {
+  loadingSlot.append(
+    loadingIndicator({
+      label: t("popup.loading"),
+      contained: true
+    })
+  );
+}
+
+void (async () => {
+  try {
+    await render();
+  } catch (error: unknown) {
+    showError("popup.error.init", error);
+  } finally {
+    loadingSlot?.replaceChildren();
   }
-});
+})();

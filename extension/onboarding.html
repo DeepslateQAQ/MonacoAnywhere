@@ -3,235 +3,179 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MonacoAnywhere setup</title>
+    <title data-i18n="onboarding.pageTitle"></title>
+    <link rel="stylesheet" href="theme.css" />
     <style>
-      :root {
-        color-scheme: light dark;
-        --ma-bg: #fdf7ff;
-        --ma-surface: #ffffff;
-        --ma-text: #1d1b20;
-        --ma-muted: #625b71;
-        --ma-primary: #6750a4;
-        --ma-primary-text: #ffffff;
-        --ma-outline: #cac4d0;
-        --ma-error: #b3261e;
-        --ma-radius: 20px;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --ma-bg: #141218;
-          --ma-surface: #211f26;
-          --ma-text: #e6e0e9;
-          --ma-muted: #cac4d0;
-          --ma-primary: #d0bcff;
-          --ma-primary-text: #201a2b;
-          --ma-outline: #49454f;
-          --ma-error: #f2b8b5;
-        }
-      }
-      body { margin: 0; }
       .ma-ui {
-        min-height: 100vh;
-        box-sizing: border-box;
-        padding: 32px 20px 48px;
-        background: var(--ma-bg);
-        color: var(--ma-text);
-        font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+        min-block-size: 100vh;
       }
-      .ma-shell { max-width: 760px; margin: 0 auto; }
-      .ma-eyebrow {
-        margin: 0 0 6px;
-        color: var(--ma-muted);
-        font-size: 13px;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
+      .ma-ui [hidden] {
+        display: none !important;
       }
-      h1 { margin: 0 0 10px; font-size: clamp(28px, 4vw, 40px); line-height: 1.15; }
-      h2 { margin: 0 0 10px; font-size: 22px; }
-      h3 { margin: 0 0 6px; font-size: 17px; }
-      p { margin: 0 0 12px; }
-      .ma-intro { max-width: 62ch; color: var(--ma-muted); }
-      .ma-stepper {
+      .ma-ui #ma-backend-guidance {
         display: flex;
-        flex-wrap: wrap;
-        gap: 8px 18px;
-        margin: 24px 0;
-        padding: 0;
-        list-style: none;
+        flex-direction: column;
+        gap: 10px;
       }
-      .ma-stepper li {
+      .ma-ui .ma-choice {
         display: flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--ma-muted);
-        font-size: 13px;
-      }
-      .ma-stepper [data-active="true"] { color: var(--ma-text); font-weight: 650; }
-      .ma-stepper span {
-        display: grid;
-        place-items: center;
-        width: 24px;
-        height: 24px;
-        border: 1px solid var(--ma-outline);
-        border-radius: 50%;
-        font-size: 12px;
-      }
-      .ma-stepper [aria-current="step"] span {
-        border-color: transparent;
-        background: var(--ma-primary);
-        color: var(--ma-primary-text);
-      }
-      .ma-card {
-        padding: 24px;
-        border: 1px solid var(--ma-outline);
-        border-radius: var(--ma-radius);
-        background: var(--ma-surface);
-      }
-      fieldset { margin: 0 0 18px; padding: 0; border: 0; }
-      legend { margin-bottom: 10px; font-weight: 650; }
-      .ma-choice {
-        display: grid;
-        gap: 4px;
-        margin: 0 0 10px;
+        align-items: flex-start;
         padding: 14px 16px;
-        border: 1px solid var(--ma-outline);
-        border-radius: 14px;
-        cursor: pointer;
+        border: 1px solid var(--m3e-sys-color-outline-variant);
+        border-radius: var(--m3e-sys-shape-corner-medium);
+        background-color: var(--m3e-sys-color-surface-container-low);
       }
-      .ma-choice:has(input:checked) {
-        border-color: var(--ma-primary);
-        box-shadow: 0 0 0 1px var(--ma-primary) inset;
+      .ma-ui .ma-choice:has(.m3e-radio-button__input:checked) {
+        border-color: var(--m3e-sys-color-primary);
+        box-shadow: inset 0 0 0 1px var(--m3e-sys-color-primary);
       }
-      .ma-choice input { width: 18px; height: 18px; margin: 0 0 4px; accent-color: var(--ma-primary); }
-      .ma-choice strong { display: block; }
-      .ma-choice span { color: var(--ma-muted); font-size: 14px; }
-      .ma-hint { color: var(--ma-muted); font-size: 14px; }
-      .ma-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
-      button {
-        min-height: 42px;
-        padding: 0 18px;
-        border: 1px solid var(--ma-outline);
-        border-radius: 999px;
-        background: transparent;
-        color: inherit;
-        font: inherit;
-        cursor: pointer;
+      .ma-ui .ma-choice__text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-block-start: 8px;
       }
-      button.primary {
-        border-color: transparent;
-        background: var(--ma-primary);
-        color: var(--ma-primary-text);
-        font-weight: 650;
+      .ma-ui .ma-choice__text strong {
+        font-weight: var(--m3e-sys-typescale-label-large-weight);
       }
-      button:focus-visible { outline: 3px solid var(--ma-primary); outline-offset: 2px; }
-      button:disabled { cursor: not-allowed; opacity: 0.65; }
-      code {
-        padding: 2px 6px;
-        border-radius: 6px;
-        background: color-mix(in srgb, var(--ma-text) 8%, transparent);
-        font-family: ui-monospace, Consolas, monospace;
-        font-size: 13px;
-        overflow-wrap: anywhere;
+      .ma-ui .ma-choice__description {
+        color: var(--m3e-sys-color-on-surface-variant);
+        font-size: var(--m3e-sys-typescale-body-small-size);
+        line-height: var(--m3e-sys-typescale-body-small-line-height);
       }
-      .code-line { overflow-wrap: anywhere; }
-      .ma-error { margin-top: 14px; color: var(--ma-error); font-weight: 600; }
-      .ma-status { margin-top: 14px; color: var(--ma-muted); }
-      .ma-note {
-        margin-top: 16px;
-        padding: 12px 14px;
-        border-left: 3px solid var(--ma-primary);
-        color: var(--ma-muted);
-        font-size: 14px;
+      .ma-ui .ma-validation {
+        display: grid;
+        gap: 12px;
       }
-      .ma-validation { display: grid; gap: 10px; }
-      @media (max-width: 520px) {
-        .ma-ui { padding: 22px 14px 36px; }
-        .ma-card { padding: 18px; }
+      .ma-ui .ma-stepper > li > strong {
+        font-weight: inherit;
       }
     </style>
   </head>
   <body class="ma-ui">
     <main class="ma-shell" aria-labelledby="ma-title">
       <header>
-        <p class="ma-eyebrow">MonacoAnywhere · <span id="ma-build-mode">bootstrap</span></p>
-        <h1 id="ma-title">Set up MonacoAnywhere</h1>
-        <p class="ma-intro">
-          This wizard normally chooses a language-service backend, prepares its
-          resources, and runs a real fixture check. The current bootstrap build
-          can only record your choice; it cannot validate a backend or finish
-          setup.
-        </p>
+        <p class="ma-eyebrow" id="ma-build-mode"></p>
+        <h1 id="ma-title" data-i18n="onboarding.title"></h1>
+        <p class="ma-intro" data-i18n="onboarding.intro"></p>
       </header>
 
-      <ol class="ma-stepper" aria-label="Setup steps">
-        <li id="ma-step-marker-1" aria-current="step"><span>1</span> Backend</li>
-        <li id="ma-step-marker-2"><span>2</span> Resources</li>
-        <li id="ma-step-marker-3"><span>3</span> Validation</li>
+      <ol class="ma-stepper" data-i18n-aria-label="onboarding.steps.ariaLabel">
+        <li id="ma-step-marker-1" aria-current="step">
+          <span>1</span>
+          <strong data-i18n="onboarding.steps.backend"></strong>
+        </li>
+        <li id="ma-step-marker-2">
+          <span>2</span>
+          <strong data-i18n="onboarding.steps.resources"></strong>
+        </li>
+        <li id="ma-step-marker-3">
+          <span>3</span>
+          <strong data-i18n="onboarding.steps.validation"></strong>
+        </li>
       </ol>
 
       <section id="ma-step-1" class="ma-card" aria-labelledby="ma-step-1-title">
-        <h2 id="ma-step-1-title">Choose a backend</h2>
-        <fieldset>
-          <legend>Language-service backend</legend>
-          <label class="ma-choice">
-            <input type="radio" name="ma-backend" value="wasm" />
-            <strong>WASM clangd</strong>
-            <span>Runs in the extension. Requires a downloaded toolchain data pack and the bundled WASM engine.</span>
+        <h2 id="ma-step-1-title" data-i18n="onboarding.choose.title"></h2>
+        <fieldset class="m3e-radio-group">
+          <legend data-i18n="onboarding.choose.legend"></legend>
+          <label class="ma-choice m3e-radio-button">
+            <input
+              class="m3e-radio-button__input"
+              type="radio"
+              name="ma-backend"
+              value="wasm"
+            />
+            <span class="m3e-radio-button__icon" aria-hidden="true"></span>
+            <span class="m3e-radio-button__state" aria-hidden="true"></span>
+            <span class="m3e-radio-button__label ma-choice__text">
+              <strong data-i18n="onboarding.backend.wasm.title"></strong>
+              <span
+                class="ma-choice__description"
+                data-i18n="onboarding.backend.wasm.description"
+              ></span>
+            </span>
           </label>
-          <label class="ma-choice">
-            <input type="radio" name="ma-backend" value="native" />
-            <strong>Local clangd</strong>
-            <span>Uses a separately installed native host and clangd on this computer.</span>
+          <label class="ma-choice m3e-radio-button">
+            <input
+              class="m3e-radio-button__input"
+              type="radio"
+              name="ma-backend"
+              value="native"
+            />
+            <span class="m3e-radio-button__icon" aria-hidden="true"></span>
+            <span class="m3e-radio-button__state" aria-hidden="true"></span>
+            <span class="m3e-radio-button__label ma-choice__text">
+              <strong data-i18n="onboarding.backend.native.title"></strong>
+              <span
+                class="ma-choice__description"
+                data-i18n="onboarding.backend.native.description"
+              ></span>
+            </span>
           </label>
         </fieldset>
-        <p class="ma-hint">
-          Nothing is preselected. A backend failure will never silently switch
-          to the other backend.
-        </p>
+        <p class="ma-hint" data-i18n="onboarding.choose.hint"></p>
         <div class="ma-actions">
-          <button id="ma-next-1" class="primary" type="button">Continue</button>
+          <button
+            id="ma-next-1"
+            class="m3e-button m3e-button--size-m"
+            type="button"
+            data-i18n="common.continue"
+          ></button>
         </div>
       </section>
 
       <section id="ma-step-2" class="ma-card" aria-labelledby="ma-step-2-title" hidden>
-        <h2 id="ma-step-2-title">Prepare resources</h2>
+        <h2 id="ma-step-2-title" data-i18n="onboarding.resources.title"></h2>
         <div id="ma-backend-guidance"></div>
-        <div class="ma-note">
-          Resource download, native-host detection, and the engine are not part
-          of this skeleton build. Nothing will be downloaded or launched here.
-        </div>
+        <div class="ma-note" data-i18n="onboarding.resources.note"></div>
         <div class="ma-actions">
-          <button id="ma-back-2" type="button">Back</button>
-          <button id="ma-next-2" class="primary" type="button">Continue</button>
+          <button
+            id="ma-back-2"
+            class="m3e-button m3e-button--outlined m3e-button--size-m"
+            type="button"
+            data-i18n="common.back"
+          ></button>
+          <button
+            id="ma-next-2"
+            class="m3e-button m3e-button--size-m"
+            type="button"
+            data-i18n="common.continue"
+          ></button>
         </div>
       </section>
 
       <section id="ma-step-3" class="ma-card" aria-labelledby="ma-step-3-title" hidden>
-        <h2 id="ma-step-3-title">Validation</h2>
+        <h2 id="ma-step-3-title" data-i18n="onboarding.validation.title"></h2>
         <div class="ma-validation">
-          <p>
-            A real setup would run one <code>textDocument/completion</code>
-            request against the built-in fixture and show the returned item
-            count. This build has no clangd session, so that check is disabled.
-          </p>
-          <button id="ma-validate" type="button" disabled>Validation unavailable in this build</button>
-          <p id="ma-validation-status" class="ma-hint" role="status">
-            Validation is intentionally unavailable in this build.
-          </p>
+          <p id="ma-validation-description"></p>
+          <button
+            id="ma-validate"
+            class="m3e-button m3e-button--outlined m3e-button--size-m"
+            type="button"
+            disabled
+            data-i18n="onboarding.validation.disabledButton"
+          ></button>
+          <p id="ma-validation-status" class="ma-hint" role="status"></p>
         </div>
-        <div class="ma-note">
-          Setup is not complete and <code>onboardingComplete</code> is not
-          written. You can still inspect the editor fixture and adjust
-          preferences.
-        </div>
+        <div class="ma-note" data-i18n="onboarding.validation.completeNote"></div>
         <div class="ma-actions">
-          <button id="ma-back-3" type="button">Back</button>
-          <button id="ma-open-options" type="button">Open options</button>
+          <button
+            id="ma-back-3"
+            class="m3e-button m3e-button--outlined m3e-button--size-m"
+            type="button"
+            data-i18n="common.back"
+          ></button>
+          <button
+            id="ma-open-options"
+            class="m3e-button m3e-button--text m3e-button--size-m"
+            type="button"
+            data-i18n="common.openOptions"
+          ></button>
         </div>
       </section>
 
       <div id="ma-onboarding-status" class="ma-status" role="status" hidden></div>
-      <div id="ma-onboarding-error" class="ma-error" role="alert" hidden></div>
     </main>
 
     <script type="module" src="onboarding.js"></script>

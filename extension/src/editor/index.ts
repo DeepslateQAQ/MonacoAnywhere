@@ -9,6 +9,11 @@
 
 import * as monaco from "monaco-editor";
 
+import { setLocale, t } from "../ui/i18n.js";
+import { setStatus } from "../ui/primitives.js";
+
+const SETTINGS_KEY = "settings:v1";
+
 const FIXTURE = `#include <iostream>
 #include <vector>
 
@@ -25,6 +30,9 @@ int main() {
     return 0;
 }
 `;
+
+// Localize static markup immediately; stored preferences refine this below.
+setLocale("auto");
 
 const container = document.querySelector<HTMLElement>("[data-monaco-anywhere-editor]");
 if (!container) {
@@ -70,26 +78,104 @@ const editor = monaco.editor.create(container, {
   fixedOverflowWidgets: true,
   padding: { top: 12, bottom: 12 },
   renderWhitespace: "selection",
-  ariaLabel: "MonacoAnywhere C++ editor fixture"
+  ariaLabel: t("editor.ariaLabel")
 });
 
 document.documentElement.dataset.maBuildMode = __MA_BUILD_MODE__;
 document.documentElement.dataset.maFixture = "1";
 
-const status = document.getElementById("ma-editor-status");
-if (status) {
-  status.textContent = __MA_BOOTSTRAP__
-    ? "Language services unavailable — bootstrap build. Editing and C++ syntax highlighting work; there is no clangd engine, data pack, or OOBE validation in this slice."
-    : "Language services unavailable — this skeleton build has no LSP session. Editing and C++ syntax highlighting work; engine integration is not part of this slice.";
-}
-if (status && !cppRegistered) {
-  status.textContent =
-    "Syntax highlighting is unavailable because the cpp language definition did not register; editing still works. Language services are not implemented in this build.";
+const statusNode = document.getElementById("ma-editor-status");
+if (statusNode) {
+  setStatus(statusNode, {
+    kind: "info",
+    text: t("editor.status.initial")
+  });
 }
 
-const title = document.getElementById("ma-editor-title");
-if (title) {
-  title.textContent = `MonacoAnywhere ${__MA_BUILD_VERSION__} · ${__MA_BUILD_MODE__} fixture`;
+function buildModeLabel(): string {
+  return t(
+    __MA_BOOTSTRAP__ ? "build.mode.bootstrap" : "build.mode.production"
+  );
 }
 
+function renderHeading(): void {
+  const title = document.getElementById("ma-editor-title");
+  if (title) {
+    title.textContent = t("editor.heading", {
+      version: __MA_BUILD_VERSION__,
+      mode: buildModeLabel()
+    });
+  }
+}
+
+renderHeading();
+
+function renderStatus(): void {
+  if (!statusNode) {
+    return;
+  }
+  if (!cppRegistered) {
+    setStatus(statusNode, {
+      kind: "error",
+      text: t("editor.status.noCpp")
+    });
+    return;
+  }
+  setStatus(statusNode, {
+    kind: "info",
+    text: t(
+      __MA_BOOTSTRAP__ ? "editor.status.bootstrap" : "editor.status.production"
+    )
+  });
+}
+
+function applyThemePreference(theme: MaTheme): void {
+  const root = document.querySelector<HTMLElement>(".ma-ui");
+  if (!root) {
+    return;
+  }
+  if (theme === "light" || theme === "dark") {
+    root.dataset.theme = theme;
+  } else {
+    delete root.dataset.theme;
+  }
+}
+
+async function readUiPreferences(): Promise<{ locale: MaLocale; theme: MaTheme }> {
+  try {
+    const stored = await chrome.storage.local.get(SETTINGS_KEY);
+    const raw: unknown = stored[SETTINGS_KEY];
+    if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
+      const value = raw as Partial<MaSettings>;
+      return {
+        locale:
+          value.locale === "zh-CN" ||
+          value.locale === "en" ||
+          value.locale === "auto"
+            ? value.locale
+            : "auto",
+        theme:
+          value.theme === "light" ||
+          value.theme === "dark" ||
+          value.theme === "system"
+            ? value.theme
+            : "system"
+      };
+    }
+  } catch {
+    // Storage is optional for rendering; browser defaults remain in effect.
+  }
+  return { locale: "auto", theme: "system" };
+}
+
+async function localizePage(): Promise<void> {
+  const preferences = await readUiPreferences();
+  setLocale(preferences.locale);
+  applyThemePreference(preferences.theme);
+  renderHeading();
+  editor.updateOptions({ ariaLabel: t("editor.ariaLabel") });
+  renderStatus();
+}
+
+void localizePage();
 editor.focus();

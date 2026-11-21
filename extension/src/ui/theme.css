@@ -1,0 +1,362 @@
+/*
+ * MonacoAnywhere shared Material 3 Expressive theme.
+ *
+ * Import order is deliberate: self-hosted font faces first, then reference
+ * tokens, then the light/dark theme tokens, then the Material Symbols subset,
+ * then the component CSS used by the extension UI.
+ *
+ * The build scopes this stylesheet to the extension UI (`.ma-ui` / a shadow
+ * root) and rewrites the local font URLs to chrome-extension:// URLs. Nothing
+ * here may be applied to Monaco's own DOM.
+ *
+ * Fonts are vendored from @kyralabs/m3e-tokens 1.8.0 into extension/fonts and
+ * extension/icons; see extension/fonts/PROVENANCE.txt and
+ * extension/icons/PROVENANCE.txt. There are no remote @import rules.
+ *
+ * Build contract: keep extension/fonts in the package and rewrite every
+ * url("...woff2") to a chrome-extension:// URL (or an absolute extension-root
+ * /fonts/ URL) in shadow-root strings. Page origins must never resolve these
+ * relative paths.
+ *
+ * Theme selection: the entry sets data-theme="light" or data-theme="dark" on
+ * the document root for an explicit choice; omitting it (or using
+ * data-theme="system") follows prefers-color-scheme. These are the selectors
+ * authored by @kyralabs/m3e-tokens/theme.css.
+ *
+ * Scoping note: the :root token blocks from tokens.css, theme.css and
+ * material-symbols.css must land on the UI scope root (:scope / :host(.ma-ui)),
+ * not on a descendant. The component classes can then be prefixed normally.
+ */
+@import "../../fonts/fonts.css";
+@import "@kyralabs/m3e-tokens/tokens.css";
+@import "@kyralabs/m3e-tokens/theme.css";
+@import "../../icons/material-symbols.css";
+
+/* Shared bases required by the component classes below. */
+@import "@kyralabs/m3e-css/state-layer.css";
+@import "@kyralabs/m3e-css/focus-ring.css";
+@import "@kyralabs/m3e-css/icon.css";
+
+/* Components used by the extension surfaces. */
+@import "@kyralabs/m3e-css/button.css";
+@import "@kyralabs/m3e-css/icon-button.css";
+@import "@kyralabs/m3e-css/text-field.css";
+@import "@kyralabs/m3e-css/radio-button.css";
+@import "@kyralabs/m3e-css/switch.css";
+@import "@kyralabs/m3e-css/dialog.css";
+@import "@kyralabs/m3e-css/snackbar.css";
+@import "@kyralabs/m3e-css/linear-progress.css";
+@import "@kyralabs/m3e-css/card.css";
+@import "@kyralabs/m3e-css/divider.css";
+@import "@kyralabs/m3e-css/list.css";
+@import "@kyralabs/m3e-css/loading-indicator.css";
+
+/*
+ * Everything below is extension-only layout. Selectors stay under
+ * :where(.ma-ui) so they can neither collide with Monaco nor leak into an OJ
+ * page that hosts the shadow-root toolbar.
+ */
+
+:where(.ma-ui) {
+  box-sizing: border-box;
+  color: var(--m3e-sys-color-on-background);
+  font-family: var(--m3e-ref-typeface-plain);
+  font-size: var(--m3e-sys-typescale-body-medium-size);
+  font-weight: var(--m3e-sys-typescale-body-medium-weight);
+  line-height: var(--m3e-sys-typescale-body-medium-line-height);
+  letter-spacing: var(--m3e-sys-typescale-body-medium-tracking);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+:where(body.ma-ui),
+:where(.ma-ui).ma-page {
+  margin: 0;
+  min-block-size: 100%;
+  background-color: var(--m3e-sys-color-background);
+}
+
+:where(.ma-ui[data-theme="light"]) {
+  color-scheme: light;
+}
+
+:where(.ma-ui[data-theme="dark"]) {
+  color-scheme: dark;
+}
+
+:where(.ma-ui) *,
+:where(.ma-ui) *::before,
+:where(.ma-ui) *::after {
+  box-sizing: border-box;
+}
+
+:where(.ma-ui) [hidden] {
+  display: none !important;
+}
+
+/* The native top-layer dialog stays transparent; M3E paints the surface. */
+:where(.ma-ui).ma-dialog {
+  margin: auto;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  color: var(--m3e-sys-color-on-surface);
+}
+
+:where(.ma-ui) :is(h1, h2, h3, h4) {
+  margin: 0;
+  color: var(--m3e-sys-color-on-surface);
+  font-family: var(--m3e-ref-typeface-brand);
+}
+
+:where(.ma-ui) h1 {
+  font-size: var(--m3e-sys-typescale-headline-small-size);
+  font-weight: var(--m3e-sys-typescale-headline-small-weight);
+  line-height: var(--m3e-sys-typescale-headline-small-line-height);
+  letter-spacing: var(--m3e-sys-typescale-headline-small-tracking);
+}
+
+:where(.ma-ui) h2 {
+  font-size: var(--m3e-sys-typescale-title-large-size);
+  font-weight: var(--m3e-sys-typescale-title-large-weight);
+  line-height: var(--m3e-sys-typescale-title-large-line-height);
+  letter-spacing: var(--m3e-sys-typescale-title-large-tracking);
+}
+
+:where(.ma-ui) h3 {
+  font-size: var(--m3e-sys-typescale-title-medium-size);
+  font-weight: var(--m3e-sys-typescale-title-medium-weight);
+  line-height: var(--m3e-sys-typescale-title-medium-line-height);
+  letter-spacing: var(--m3e-sys-typescale-title-medium-tracking);
+}
+
+:where(.ma-ui) p {
+  margin: 0;
+}
+
+:where(.ma-ui) a {
+  color: var(--m3e-sys-color-primary);
+  text-underline-offset: 0.15em;
+}
+
+:where(.ma-ui) code,
+:where(.ma-ui) pre {
+  font-family: var(--m3e-ref-typeface-mono, ui-monospace, "SFMono-Regular", Consolas, monospace);
+}
+
+:where(.ma-ui) code {
+  padding: 0.05em 0.35em;
+  border-radius: var(--m3e-sys-shape-corner-extra-small);
+  background-color: var(--m3e-sys-color-surface-container-high);
+  color: var(--m3e-sys-color-on-surface);
+  font-size: 0.92em;
+}
+
+:where(.ma-ui) .ma-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  inline-size: min(100%, 960px);
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 40px) clamp(16px, 4vw, 32px) 48px;
+}
+
+:where(.ma-ui) .ma-shell > header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+:where(.ma-ui) .ma-eyebrow {
+  color: var(--m3e-sys-color-primary);
+  font-size: var(--m3e-sys-typescale-label-large-size);
+  font-weight: var(--m3e-sys-typescale-label-large-weight);
+  line-height: var(--m3e-sys-typescale-label-large-line-height);
+  letter-spacing: var(--m3e-sys-typescale-label-large-tracking);
+  text-transform: uppercase;
+}
+
+:where(.ma-ui) .ma-intro {
+  max-inline-size: 72ch;
+  color: var(--m3e-sys-color-on-surface-variant);
+  font-size: var(--m3e-sys-typescale-body-large-size);
+  line-height: var(--m3e-sys-typescale-body-large-line-height);
+}
+
+:where(.ma-ui) .ma-note,
+:where(.ma-ui) .ma-hint,
+:where(.ma-ui) .ma-meta,
+:where(.ma-ui) .ma-id {
+  color: var(--m3e-sys-color-on-surface-variant);
+  font-size: var(--m3e-sys-typescale-body-small-size);
+  line-height: var(--m3e-sys-typescale-body-small-line-height);
+}
+
+:where(.ma-ui) .ma-meta,
+:where(.ma-ui) .ma-id {
+  overflow-wrap: anywhere;
+}
+
+:where(.ma-ui) .ma-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(16px, 3vw, 24px);
+  border: 1px solid var(--m3e-sys-color-outline-variant);
+  border-radius: var(--m3e-sys-shape-corner-large);
+  background-color: var(--m3e-sys-color-surface-container-low);
+  color: var(--m3e-sys-color-on-surface);
+}
+
+:where(.ma-ui) .ma-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+}
+
+:where(.ma-ui) .ma-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+:where(.ma-ui) .ma-actions--end {
+  justify-content: flex-end;
+}
+
+:where(.ma-ui) .ma-stepper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--m3e-sys-color-on-surface-variant);
+  font-size: var(--m3e-sys-typescale-label-large-size);
+  font-weight: var(--m3e-sys-typescale-label-large-weight);
+}
+
+:where(.ma-ui) .ma-stepper > li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+:where(.ma-ui) .ma-stepper > li > span {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: var(--m3e-sys-shape-corner-full);
+  background-color: var(--m3e-sys-color-surface-container-high);
+  color: var(--m3e-sys-color-on-surface-variant);
+  font-size: var(--m3e-sys-typescale-label-medium-size);
+}
+
+:where(.ma-ui) .ma-stepper > li[aria-current="step"] {
+  color: var(--m3e-sys-color-primary);
+}
+
+:where(.ma-ui) .ma-stepper > li[aria-current="step"] > span {
+  background-color: var(--m3e-sys-color-primary);
+  color: var(--m3e-sys-color-on-primary);
+}
+
+:where(.ma-ui) .ma-status {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  max-inline-size: 90ch;
+  padding: 8px 12px;
+  border-radius: var(--m3e-sys-shape-corner-medium);
+  background-color: var(--m3e-sys-color-surface-container);
+  color: var(--m3e-sys-color-on-surface-variant);
+  font-size: var(--m3e-sys-typescale-body-small-size);
+  line-height: var(--m3e-sys-typescale-body-small-line-height);
+}
+
+:where(.ma-ui) .ma-status[data-kind="info"] {
+  background-color: var(--m3e-sys-color-surface-container);
+  color: var(--m3e-sys-color-on-surface-variant);
+}
+
+:where(.ma-ui) .ma-status[data-kind="error"],
+:where(.ma-ui) .ma-error {
+  background-color: var(--m3e-sys-color-error-container);
+  color: var(--m3e-sys-color-on-error-container);
+}
+
+:where(.ma-ui) .ma-error {
+  padding: 10px 12px;
+  border-radius: var(--m3e-sys-shape-corner-medium);
+  font-size: var(--m3e-sys-typescale-body-small-size);
+  line-height: var(--m3e-sys-typescale-body-small-line-height);
+}
+
+:where(.ma-ui) fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+:where(.ma-ui) legend {
+  padding: 0;
+  color: var(--m3e-sys-color-on-surface);
+  font-size: var(--m3e-sys-typescale-title-small-size);
+  font-weight: var(--m3e-sys-typescale-title-small-weight);
+  line-height: var(--m3e-sys-typescale-title-small-line-height);
+}
+
+:where(.ma-ui) label {
+  color: var(--m3e-sys-color-on-surface);
+}
+
+:where(.ma-ui) .ma-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--m3e-sys-color-on-surface-variant);
+  font-size: var(--m3e-sys-typescale-label-large-size);
+  font-weight: var(--m3e-sys-typescale-label-large-weight);
+  line-height: var(--m3e-sys-typescale-label-large-line-height);
+}
+
+:where(.ma-ui) .ma-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  border-block-end: 1px solid var(--m3e-sys-color-outline-variant);
+  background-color: var(--m3e-sys-color-surface-container);
+  color: var(--m3e-sys-color-on-surface);
+}
+
+:where(.ma-ui) .ma-toolbar__spacer {
+  flex: 1 1 auto;
+}
+
+:where(.ma-ui) .ma-visually-hidden {
+  position: absolute !important;
+  inline-size: 1px !important;
+  block-size: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.ma-ui) *,
+  :where(.ma-ui) *::before,
+  :where(.ma-ui) *::after {
+    scroll-behavior: auto !important;
+  }
+}
