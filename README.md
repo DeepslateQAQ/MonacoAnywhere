@@ -23,7 +23,8 @@ The project is licensed `AGPL-3.0-only`.
 - Both backends are selectable: WASM clangd in a worker and a Go Native
   Messaging host that launches the system clangd and serves an authenticated
   loopback WebSocket.
-- Luogu (CM6 submit/IDE), AtCoder (Ace/plain submit), Codeforces (Ace submit
+- Luogu (CM6 submit/IDE), AtCoder (Ace/plain submit pages plus task pages
+  whose statement embeds the signed-in submission form), Codeforces (Ace submit
   pages including `/problemset/submit/<id>/<letter>`), and Hydro (submit
   textarea and the online IDE reached with Alt+E) are taken over with element
   hiding, exact restore, and bidirectional text/language sync.
@@ -37,9 +38,24 @@ The project is licensed `AGPL-3.0-only`.
   site LSP or a return to the site service requires a page reload; the extension
   does not fake provider teardown.
 - The site editor header is a single 34 px row with the C++ standard selector
-  and one status line. Backend, site-service, and theme controls live in the
-  popup: a status card, a segmented backend choice (including site service on
-  Hydro), a theme selector, and buttons for the standalone editor and settings.
+  and one right-aligned status line spanning the remaining width; it stays
+  vertically centered and truncates on narrow screens. Backend, site-service,
+  and theme controls live in the popup: a status card, a connected backend
+  button group (including site service on Hydro), a theme selector, and buttons
+  for the standalone editor and settings.
+- The settings page follows the Android Settings layout on an M3E list-detail
+  scaffold: five segmented rounded tiles with round tinted icon badges and
+  two-line labels sit on the left, while the selected category renders as
+  grouped rounded cards of setting rows (title, supporting text, and a trailing
+  value/select, inline field, or tonal segmented button group) with section
+  labels above each card. Saving is a tonal extended FAB pinned to the bottom
+  end of the settings pane, and the setup wizard is a navigation row in the
+  current-state card. Changing the backend clears its validation, which can be
+  re-run from the validation row in options with the same real completion
+  probe the setup wizard uses; the wizard remains for pack installation. The detail column fills the pane's width on wide windows;
+  below 840 px the scaffold shows one pane, a category pick navigates to the
+  section, and an arrow icon button returns to the list. The selected category
+  is kept in the URL hash.
 - The default editor font is CSS `monospace`, so the editor uses the user's
   browser-configured monospace font. A custom CSS font stack can be entered in
   settings; the legacy built-in default is migrated to `monospace`.
@@ -61,8 +77,14 @@ The project is licensed `AGPL-3.0-only`.
   load: Simplified Chinese uses Monaco's bundled NLS table, other locales keep
   Monaco's inline English strings. Context menus, find, and command palette use
   explicit opaque theme colors.
-- Draft save/conflict notices appear as a compact floating toast over the editor
-  instead of consuming another header row.
+- Draft feedback and settings confirmations use M3E Snackbar, including its
+  inverse surface, motion, hover/focus timeout pause, and action/dismiss controls.
+  Informational messages time out after four seconds; errors and actions remain
+  until addressed or dismissed. Replacement cancels stale actions.
+- Persistent setup/backend notices and the generic picker use M3E cards,
+  buttons, and text fields in isolated shadow roots. Picking temporarily hides
+  the persistent notice so the two panels cannot overlap. Progress and
+  validation errors remain inline rather than disappearing as toasts.
 - Monaco offers its native VS Code themes, classic VS Code built-ins (Monokai,
   Solarized Dark/Light, Abyss, Kimbie Dark, Quiet Light, Tomorrow Night Blue,
   Red, Dark Modern, Light Modern), and the four Catppuccin variants using the
@@ -74,7 +96,8 @@ The project is licensed `AGPL-3.0-only`.
   and local-only recovery.
 - Onboarding, options, popup, and editor UI are shared M3E surfaces with
   Simplified Chinese/English messages, light/dark/system themes, reduced-motion
-  handling, focus restoration, and keyboard-operable controls.
+  handling, focus restoration, and keyboard-operable controls. Compiler-option,
+  draft-conflict, and setup choices keep M3E's native centered radio-row layout.
 
 ## Known gaps
 
