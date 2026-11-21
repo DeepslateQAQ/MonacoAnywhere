@@ -1,32 +1,31 @@
 /*
- * Bootstrap options page.
+ * Options page.
  *
- * Preferences are stored locally under settings:v1. There is no fake clangd
- * detection or validation: the current build has no engine or native host.
- * The page preserves onboardingComplete and never invents a successful check.
+ * All preferences go through the centralized settings module; this page keeps
+ * no private settings shape. Theme and interface language persist and apply
+ * immediately. No backend is validated here, and onboardingComplete is never
+ * written by this page.
  */
 
-import { setLocale, t } from "../ui/i18n.js";
+import {
+  DEFAULT_SETTINGS,
+  MAX_HIDDEN_PAUSE_MS,
+  MIN_HIDDEN_PAUSE_MS,
+  getSettings,
+  subscribeSettings,
+  updateSettings,
+  type BackendChoice,
+  type LocalePreference,
+  type Settings,
+  type ThemePreference
+} from "../background/state.js";
+import { setLocale, t, type MessageKey } from "../ui/i18n.js";
 import { loadingIndicator, setStatus } from "../ui/primitives.js";
 
-const SETTINGS_KEY = "settings:v1";
-const MIN_PAUSE_MS = 1000;
-const MAX_PAUSE_MS = 86_400_000;
-const DEFAULT_SETTINGS: MaSettings = {
-  backend: null,
-  siteBackends: {},
-  theme: "system",
-  locale: "auto",
-  hiddenPauseMs: 30000,
-  queryDriverAllowlist: [],
-  extraIncludeDirs: [],
-  editorFontFamily: '"IBM Plex Mono", Consolas, monospace',
-  editorTheme: "vs-dark",
-  onboardingComplete: false
-};
-
-// Browser locale first, then the stored explicit preference in initialise().
+// Localize static markup immediately; getSettings() refines this below.
 setLocale("auto");
+
+let currentSettings: Settings | null = null;
 
 function requireElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -34,15 +33,6 @@ function requireElement<T extends HTMLElement>(id: string): T {
     throw new Error(`Missing options element #${id}`);
   }
   return element as T;
-}
-
-async function readSettings(): Promise<MaSettings> {
-  const stored = await chrome.storage.local.get(SETTINGS_KEY);
-  const value: unknown = stored[SETTINGS_KEY];
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return { ...DEFAULT_SETTINGS };
-  }
-  return { ...DEFAULT_SETTINGS, ...(value as Partial<MaSettings>) };
 }
 
 function parseList(value: string): string[] {
@@ -62,7 +52,7 @@ function showStatus(kind: "info" | "error", text: string): void {
   node.hidden = text.length === 0;
 }
 
-function backendLabel(backend: MaBackendChoice | null): string {
+function backendLabel(backend: BackendChoice | null): string {
   if (backend === "wasm") {
     return t("options.backend.wasm");
   }
@@ -78,13 +68,7 @@ function buildModeLabel(): string {
   );
 }
 
-function renderHeader(): void {
-  requireElement("ma-build-mode").textContent = t("options.eyebrow", {
-    mode: buildModeLabel()
-  });
-}
-
-function applyThemePreference(theme: MaTheme): void {
+function applyThemePreference(theme: ThemePreference): void {
   const root = document.querySelector<HTMLElement>(".ma-ui");
   if (!root) {
     return;
@@ -96,7 +80,34 @@ function applyThemePreference(theme: MaTheme): void {
   }
 }
 
-function fillForm(settings: MaSettings): void {
+function renderHeader(): void {
+  requireElement("ma-build-mode").textContent = t("options.eyebrow", {
+    mode: buildModeLabel()
+  });
+}
+
+function renderState(settings: Settings): void {
+  requireElement("ma-oobe-state").textContent =
+    settings.backend === null
+      ? t("options.state.none")
+      : t("options.state.backend", {
+          backend: backendLabel(settings.backend),
+          complete: t(settings.onboardingComplete ? "common.yes" : "common.no")
+        });
+  requireElement("ma-site-overrides").textContent = t(
+    "options.state.siteOverrides",
+    { count: Object.keys(settings.siteBackends).length }
+  );
+}
+
+function applyUiPreferences(settings: Settings): void {
+  setLocale(settings.locale);
+  applyThemePreference(settings.theme);
+  renderHeader();
+  renderState(settings);
+}
+
+function fillForm(settings: Settings): void {
   requireElement<HTMLSelectElement>("ma-backend").value = settings.backend ?? "";
   requireElement<HTMLSelectElement>("ma-theme").value = settings.theme;
   requireElement<HTMLSelectElement>("ma-locale").value = settings.locale;
@@ -111,40 +122,80 @@ function fillForm(settings: MaSettings): void {
     settings.extraIncludeDirs.join("\n");
   requireElement<HTMLInputElement>("ma-editor-font").value =
     settings.editorFontFamily;
-  requireElement<HTMLInputElement>("ma-editor-theme").value = settings.editorTheme;
+  requireElement<HTMLInputElement>("ma-editor-theme").value =
+    settings.editorTheme;
+}
 
-  const oobe = requireElement("ma-oobe-state");
-  oobe.textContent =
-    settings.backend === null
-      ? t("options.state.none")
-      : t("options.state.backend", {
-          backend: backendLabel(settings.backend),
-          complete: String(settings.onboardingComplete)
-        });
+function readTheme(value: string): ThemePreference {
+  return value === "light" || value === "dark" || value === "system"
+    ? value
+    : "system";
+}
+
+function readLocale(value: string): LocalePreference {
+  return value === "zh-CN" || value === "en" || value === "auto"
+    ? value
+    : "auto";
+}
+
+async function persistPatch(
+  patch: Partial<Settings>,
+  successKey: MessageKey,
+  revert?: () => void
+): Promise<void> {
+  try {
+    const next = await updateSettings(patch);
+    currentSettings = next;
+    applyUiPreferences(next);
+    showStatus("info", t(successKey));
+  } catch (error: unknown) {
+    revert?.();
+    showStatus(
+      "error",
+      t("options.error.preferenceSave", { error: String(error) })
+    );
+  }
+}
+
+function wireImmediatePreferences(): void {
+  const themeSelect = requireElement<HTMLSelectElement>("ma-theme");
+  themeSelect.addEventListener("change", () => {
+    const theme = readTheme(themeSelect.value);
+    void persistPatch({ theme }, "options.info.themeSaved", () => {
+      themeSelect.value = currentSettings?.theme ?? "system";
+    });
+  });
+
+  const localeSelect = requireElement<HTMLSelectElement>("ma-locale");
+  localeSelect.addEventListener("change", () => {
+    const locale = readLocale(localeSelect.value);
+    void persistPatch({ locale }, "options.info.localeSaved", () => {
+      localeSelect.value = currentSettings?.locale ?? "auto";
+    });
+  });
 }
 
 async function savePreferences(): Promise<void> {
   showStatus("info", "");
 
   const backendValue = requireElement<HTMLSelectElement>("ma-backend").value;
-  if (backendValue !== "" && backendValue !== "wasm" && backendValue !== "native") {
+  if (
+    backendValue !== "" &&
+    backendValue !== "wasm" &&
+    backendValue !== "native"
+  ) {
     showStatus("error", t("options.error.unsupportedBackend"));
     return;
   }
-  const backend: MaBackendChoice | null =
-    backendValue === "wasm" || backendValue === "native" ? backendValue : null;
+  const backend: BackendChoice | null =
+    backendValue === "wasm" || backendValue === "native"
+      ? backendValue
+      : null;
 
-  const themeValue = requireElement<HTMLSelectElement>("ma-theme").value;
-  const theme: MaTheme =
-    themeValue === "light" || themeValue === "dark" || themeValue === "system"
-      ? themeValue
-      : "system";
-
-  const localeValue = requireElement<HTMLSelectElement>("ma-locale").value;
-  const locale: MaLocale =
-    localeValue === "zh-CN" || localeValue === "en" || localeValue === "auto"
-      ? localeValue
-      : "auto";
+  const theme = readTheme(requireElement<HTMLSelectElement>("ma-theme").value);
+  const locale = readLocale(
+    requireElement<HTMLSelectElement>("ma-locale").value
+  );
 
   const hiddenPauseMs = Number.parseInt(
     requireElement<HTMLInputElement>("ma-hidden-pause").value,
@@ -152,25 +203,29 @@ async function savePreferences(): Promise<void> {
   );
   if (
     !Number.isInteger(hiddenPauseMs) ||
-    hiddenPauseMs < MIN_PAUSE_MS ||
-    hiddenPauseMs > MAX_PAUSE_MS
+    hiddenPauseMs < MIN_HIDDEN_PAUSE_MS ||
+    hiddenPauseMs > MAX_HIDDEN_PAUSE_MS
   ) {
     showStatus(
       "error",
       t("options.error.pauseRange", {
-        min: MIN_PAUSE_MS,
-        max: MAX_PAUSE_MS
+        min: MIN_HIDDEN_PAUSE_MS,
+        max: MAX_HIDDEN_PAUSE_MS
       })
     );
     return;
   }
 
-  const clangdPath = requireElement<HTMLInputElement>("ma-clangd-path").value.trim();
-  const patch: Partial<MaSettings> = {
+  const clangdPath = requireElement<HTMLInputElement>(
+    "ma-clangd-path"
+  ).value.trim();
+  const patch: Partial<Settings> = {
     backend,
     theme,
     locale,
     hiddenPauseMs,
+    // Passing undefined clears the optional field in the centralized merge.
+    clangdPath: clangdPath.length === 0 ? undefined : clangdPath,
     queryDriverAllowlist: parseList(
       requireElement<HTMLTextAreaElement>("ma-query-driver").value
     ),
@@ -186,24 +241,21 @@ async function savePreferences(): Promise<void> {
   };
 
   try {
-    const current = await readSettings();
-    const next: MaSettings = { ...current, ...patch };
-    if (clangdPath.length === 0) {
-      delete next.clangdPath;
-    } else {
-      next.clangdPath = clangdPath;
-    }
-    await chrome.storage.local.set({ [SETTINGS_KEY]: next });
-    setLocale(next.locale);
-    applyThemePreference(next.theme);
-    renderHeader();
+    const wasComplete = currentSettings?.onboardingComplete === true;
+    const next = await updateSettings(patch);
+    currentSettings = next;
+    applyUiPreferences(next);
     fillForm(next);
-    showStatus("info", t("options.info.saved"));
-  } catch (error: unknown) {
     showStatus(
-      "error",
-      t("options.error.save", { error: String(error) })
+      "info",
+      t(
+        wasComplete && !next.onboardingComplete
+          ? "options.info.backendChanged"
+          : "options.info.saved"
+      )
     );
+  } catch (error: unknown) {
+    showStatus("error", t("options.error.save", { error: String(error) }));
   }
 }
 
@@ -211,25 +263,39 @@ async function openSetup(): Promise<void> {
   await chrome.tabs.create({ url: chrome.runtime.getURL("onboarding.html") });
 }
 
-async function initialise(): Promise<void> {
-  const settings = await readSettings();
-  setLocale(settings.locale);
-  applyThemePreference(settings.theme);
+function syncExternalChanges(next: Settings): void {
+  currentSettings = next;
+  applyUiPreferences(next);
 
-  fillForm(settings);
-  renderHeader();
+  const backendSelect = requireElement<HTMLSelectElement>("ma-backend");
+  if (document.activeElement !== backendSelect) {
+    backendSelect.value = next.backend ?? "";
+  }
+  const themeSelect = requireElement<HTMLSelectElement>("ma-theme");
+  if (document.activeElement !== themeSelect) {
+    themeSelect.value = next.theme;
+  }
+  const localeSelect = requireElement<HTMLSelectElement>("ma-locale");
+  if (document.activeElement !== localeSelect) {
+    localeSelect.value = next.locale;
+  }
+}
+
+async function initialise(): Promise<void> {
+  currentSettings = await getSettings();
+  applyUiPreferences(currentSettings);
+  fillForm(currentSettings);
   requireElement("ma-extension-id").textContent = chrome.runtime.id;
 
   const form = requireElement<HTMLFormElement>("ma-options-form");
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     void savePreferences().catch((error: unknown) => {
-      showStatus(
-        "error",
-        t("options.error.save", { error: String(error) })
-      );
+      showStatus("error", t("options.error.save", { error: String(error) }));
     });
   });
+
+  wireImmediatePreferences();
 
   requireElement("ma-open-setup").addEventListener("click", () => {
     void openSetup().catch((error: unknown) => {
@@ -239,6 +305,9 @@ async function initialise(): Promise<void> {
       );
     });
   });
+
+  const unsubscribe = subscribeSettings(syncExternalChanges);
+  window.addEventListener("pagehide", unsubscribe, { once: true });
 }
 
 const loadingSlot = document.getElementById("ma-options-loading");

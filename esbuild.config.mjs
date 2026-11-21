@@ -466,6 +466,26 @@ async function validateEngineAndCatalogue() {
     }
   }
 
+  const buildInfoPath = path.join(ENGINE_DIR, "engine-build.json");
+  const buildInfoJson = await readFile(buildInfoPath, "utf8").catch(() => null);
+  if (buildInfoJson !== null) {
+    let buildInfo;
+    try {
+      buildInfo = JSON.parse(buildInfoJson);
+    } catch {
+      fail("engine-build.json is not valid JSON");
+    }
+    assert(
+      buildInfo?.schema === "monacoanywhere.engine-build/1" &&
+        buildInfo.engineAbi === "ma-clangd-wasm/1",
+      "engine-build.json has an unexpected schema"
+    );
+    assert(
+      buildInfo.buildId === wasmHash,
+      "engine-build.json buildId does not match clangd.wasm"
+    );
+  }
+
   let catalogue;
   try {
     catalogue = JSON.parse(await readFile(CATALOGUE_SOURCE, "utf8"));
@@ -651,6 +671,16 @@ async function runEsbuild({ bootstrap, version, extensionId }) {
     splitting: false
   });
 
+  // The engine worker is part of the extension package. Its generated runtime
+  // (`wasm/clangd-runtime.mjs`) is loaded at runtime from the same directory.
+  await build({
+    ...common,
+    entryPoints: [path.join(EXTENSION_DIR, "wasm", "src", "clangd.worker.ts")],
+    outfile: path.join(DIST_DIR, "wasm", "clangd.worker.js"),
+    format: "esm",
+    splitting: false
+  });
+
   for (const output of [
     "background.js",
     "editor.js",
@@ -664,6 +694,7 @@ async function runEsbuild({ bootstrap, version, extensionId }) {
     "content-main.js",
     "workers/editor.worker.js",
     "workers/ts.worker.js",
+    "wasm/clangd.worker.js",
     "manifest.json"
   ]) {
     await requireFile(path.join(DIST_DIR, output), `build output ${output}`);
@@ -744,6 +775,10 @@ async function main() {
       if (await fileInfo(source)) {
         await cp(source, path.join(engineTarget, artifact));
       }
+    }
+    const provenance = path.join(ENGINE_DIR, "engine-build.json");
+    if (await fileInfo(provenance)) {
+      await cp(provenance, path.join(engineTarget, "engine-build.json"));
     }
     const dataTarget = path.join(DIST_DIR, "data");
     await mkdir(dataTarget, { recursive: true });

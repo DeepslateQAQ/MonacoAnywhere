@@ -31,9 +31,9 @@ target_include_directories(clangd-wasm-runtime PRIVATE
 target_link_libraries(clangd-wasm-runtime PRIVATE clangDaemon)
 
 if(EMSCRIPTEN)
-  if(NOT DEFINED CLANGD_WASM_SYSROOT OR NOT IS_DIRECTORY "${CLANGD_WASM_SYSROOT}")
-    message(FATAL_ERROR "Set CLANGD_WASM_SYSROOT to the extracted captured sysroot")
-  endif()
+  # MonacoAnywhere fork: the toolchain sysroot is mounted by the session worker
+  # from a verified data pack, so only clang's own resource headers are
+  # preloaded here.
   include(GetClangResourceDir)
   get_clang_resource_dir(CLANGD_WASM_RESOURCE_DIR
     PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/.."
@@ -53,7 +53,6 @@ if(EMSCRIPTEN)
     "-sEXPORTED_FUNCTIONS=['_clangd_wasm_run','_clangd_wasm_stop','_malloc']"
     "-sEXPORTED_RUNTIME_METHODS=['ccall','FS','HEAPU8']"
     "-sFORCE_FILESYSTEM=1"
-    "SHELL:--preload-file ${CLANGD_WASM_SYSROOT}@/sysroot"
     "SHELL:--preload-file ${CLANGD_WASM_RESOURCE_INCLUDE_DIR}@/lib/clang/${CLANGD_WASM_RESOURCE_VERSION}/include"
     "--no-entry"
   )

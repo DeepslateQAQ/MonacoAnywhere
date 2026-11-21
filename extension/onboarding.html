@@ -47,6 +47,15 @@
         display: grid;
         gap: 12px;
       }
+      .ma-ui .ma-command {
+        margin: 0;
+        padding: 12px;
+        overflow: auto;
+        border-radius: var(--m3e-sys-shape-corner-medium);
+        background-color: var(--m3e-sys-color-surface-container);
+        color: var(--m3e-sys-color-on-surface);
+        font-size: var(--m3e-sys-typescale-body-small-size);
+      }
       .ma-ui .ma-stepper > li > strong {
         font-weight: inherit;
       }
@@ -72,6 +81,10 @@
         <li id="ma-step-marker-3">
           <span>3</span>
           <strong data-i18n="onboarding.steps.validation"></strong>
+        </li>
+        <li id="ma-step-marker-4">
+          <span>4</span>
+          <strong data-i18n="onboarding.steps.complete"></strong>
         </li>
       </ol>
 
@@ -128,6 +141,19 @@
       <section id="ma-step-2" class="ma-card" aria-labelledby="ma-step-2-title" hidden>
         <h2 id="ma-step-2-title" data-i18n="onboarding.resources.title"></h2>
         <div id="ma-backend-guidance"></div>
+        <div class="ma-validation">
+          <p id="ma-resource-description"></p>
+          <p id="ma-resource-status" class="ma-hint" role="status"></p>
+          <div class="ma-actions">
+            <button
+              id="ma-resource-check"
+              class="m3e-button m3e-button--outlined m3e-button--size-m"
+              type="button"
+              data-i18n="onboarding.resources.check"
+            ></button>
+          </div>
+          <div id="ma-resource-extra"></div>
+        </div>
         <div class="ma-note" data-i18n="onboarding.resources.note"></div>
         <div class="ma-actions">
           <button
@@ -149,19 +175,56 @@
         <h2 id="ma-step-3-title" data-i18n="onboarding.validation.title"></h2>
         <div class="ma-validation">
           <p id="ma-validation-description"></p>
-          <button
-            id="ma-validate"
-            class="m3e-button m3e-button--outlined m3e-button--size-m"
-            type="button"
-            disabled
-            data-i18n="onboarding.validation.disabledButton"
-          ></button>
           <p id="ma-validation-status" class="ma-hint" role="status"></p>
+          <div class="ma-actions">
+            <button
+              id="ma-validate"
+              class="m3e-button m3e-button--outlined m3e-button--size-m"
+              type="button"
+              data-i18n="onboarding.validation.check"
+            ></button>
+            <button
+              id="ma-change-backend"
+              class="m3e-button m3e-button--text m3e-button--size-m"
+              type="button"
+              data-i18n="onboarding.validation.changeBackend"
+            ></button>
+          </div>
         </div>
         <div class="ma-note" data-i18n="onboarding.validation.completeNote"></div>
         <div class="ma-actions">
           <button
             id="ma-back-3"
+            class="m3e-button m3e-button--outlined m3e-button--size-m"
+            type="button"
+            data-i18n="common.back"
+          ></button>
+          <button
+            id="ma-next-3"
+            class="m3e-button m3e-button--size-m"
+            type="button"
+            data-i18n="common.continue"
+          ></button>
+        </div>
+      </section>
+
+      <section id="ma-step-4" class="ma-card" aria-labelledby="ma-step-4-title" hidden>
+        <h2 id="ma-step-4-title" data-i18n="onboarding.complete.title"></h2>
+        <div class="ma-validation">
+          <p id="ma-complete-description"></p>
+          <p id="ma-complete-status" class="ma-hint" role="status"></p>
+          <button
+            id="ma-finish"
+            class="m3e-button m3e-button--size-m"
+            type="button"
+            disabled
+            data-i18n="onboarding.complete.finish"
+          ></button>
+        </div>
+        <div class="ma-note" data-i18n="onboarding.complete.requirements"></div>
+        <div class="ma-actions">
+          <button
+            id="ma-back-4"
             class="m3e-button m3e-button--outlined m3e-button--size-m"
             type="button"
             data-i18n="common.back"

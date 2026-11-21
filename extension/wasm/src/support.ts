@@ -1,14 +1,12 @@
 import { REQUIRED_WASM_FEATURES } from "./required-wasm-features.js";
 
-/** Checks the browser APIs and Wasm features required by the packaged runtime. */
+/**
+ * Checks what the packaged runtime needs: a dedicated Worker, JSPI, bulk memory
+ * and tail calls. The MonacoAnywhere fork uses one Worker per session, so
+ * SharedWorker and Web Locks are deliberately not required.
+ */
 export function isClangdWasmSupported(): boolean {
-  if (typeof SharedWorker !== "function" || typeof WebAssembly === "undefined") {
-    return false;
-  }
-  if (
-    typeof navigator === "undefined" ||
-    typeof navigator.locks?.request !== "function"
-  ) {
+  if (typeof Worker !== "function" || typeof WebAssembly === "undefined") {
     return false;
   }
   const wasm = WebAssembly as typeof WebAssembly & {

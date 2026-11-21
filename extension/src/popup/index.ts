@@ -1,14 +1,17 @@
 /*
- * Bootstrap popup: read-only status plus navigation. It does not start an
- * engine, request permissions, or validate a backend.
+ * Extension popup.
+ *
+ * Reads centralized settings only. It never starts an engine, requests host
+ * permission, or writes onboardingComplete. With no backend selected the
+ * setup action is labelled "Continue setup"; language services are reported
+ * as unavailable for this build instead of claiming a working backend.
  */
 
+import { getSettings, type BackendChoice } from "../background/state.js";
 import { setLocale, t } from "../ui/i18n.js";
 import { loadingIndicator, setStatus } from "../ui/primitives.js";
 
-const SETTINGS_KEY = "settings:v1";
-
-// Browser locale first, then the stored explicit preference in render().
+// Browser locale first, then getSettings() refines this below.
 setLocale("auto");
 
 function requireElement<T extends HTMLElement>(id: string): T {
@@ -25,7 +28,7 @@ function buildModeLabel(): string {
   );
 }
 
-function backendLabel(backend: MaBackendChoice | null): string {
+function backendLabel(backend: BackendChoice | null): string {
   if (backend === "wasm") {
     return t("popup.backend.wasm");
   }
@@ -35,7 +38,7 @@ function backendLabel(backend: MaBackendChoice | null): string {
   return t("popup.backend.none");
 }
 
-function applyThemePreference(theme: MaTheme): void {
+function applyThemePreference(theme: "system" | "light" | "dark"): void {
   const root = document.querySelector<HTMLElement>(".ma-ui");
   if (!root) {
     return;
@@ -67,39 +70,31 @@ function showError(
 }
 
 async function render(): Promise<void> {
-  const stored = await chrome.storage.local.get(SETTINGS_KEY);
-  const raw: unknown = stored[SETTINGS_KEY];
-  const settings: Partial<MaSettings> =
-    typeof raw === "object" && raw !== null && !Array.isArray(raw)
-      ? (raw as Partial<MaSettings>)
-      : {};
+  const settings = await getSettings();
+  setLocale(settings.locale);
+  applyThemePreference(settings.theme);
 
-  const locale: MaLocale =
-    settings.locale === "zh-CN" ||
-    settings.locale === "en" ||
-    settings.locale === "auto"
-      ? settings.locale
-      : "auto";
-  const theme: MaTheme =
-    settings.theme === "light" ||
-    settings.theme === "dark" ||
-    settings.theme === "system"
-      ? settings.theme
-      : "system";
-  setLocale(locale);
-  applyThemePreference(theme);
-
-  const backend = settings.backend ?? null;
-  requireElement("ma-popup-backend").textContent = backendLabel(backend);
-  requireElement("ma-popup-oobe").textContent =
-    settings.onboardingComplete === true
-      ? t("popup.oobe.stored")
-      : t("popup.oobe.incomplete");
+  requireElement("ma-popup-backend").textContent = backendLabel(
+    settings.backend
+  );
+  requireElement("ma-popup-services").textContent = t(
+    "popup.services.unavailable"
+  );
+  requireElement("ma-popup-oobe").textContent = settings.onboardingComplete
+    ? t("popup.oobe.stored")
+    : t("popup.oobe.incomplete");
   requireElement("ma-popup-build").textContent = t("popup.eyebrow", {
     mode: buildModeLabel(),
     version: __MA_BUILD_VERSION__
   });
   requireElement("ma-popup-id").textContent = chrome.runtime.id;
+
+  const setupButton = requireElement<HTMLButtonElement>("ma-open-setup");
+  setupButton.textContent = t(
+    settings.backend === null || !settings.onboardingComplete
+      ? "popup.continueSetup"
+      : "popup.openSetup"
+  );
 
   try {
     const scripts = await chrome.scripting.getRegisteredContentScripts();
@@ -116,7 +111,7 @@ async function render(): Promise<void> {
       t("common.unavailable");
   }
 
-  requireElement("ma-open-setup").addEventListener("click", () => {
+  setupButton.addEventListener("click", () => {
     void chrome.tabs
       .create({ url: chrome.runtime.getURL("onboarding.html") })
       .then(() => window.close())

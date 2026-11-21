@@ -21,26 +21,26 @@
 
 namespace {
 
-constexpr llvm::StringLiteral SystemIndexPath = "/assets/system.index";
-
-std::unique_ptr<clang::clangd::SymbolIndex> loadSystemIndex() {
-  auto Index = clang::clangd::loadIndex(
-      SystemIndexPath, clang::clangd::SymbolOrigin::Static,
+// MonacoAnywhere fork: the static index is optional. clangd's dynamic index
+// always covers the open document; a pack index adds toolchain symbols.
+std::unique_ptr<clang::clangd::SymbolIndex> loadSystemIndex(const char *Path) {
+  if (Path == nullptr || Path[0] == '\0')
+    return nullptr;
+  return clang::clangd::loadIndex(
+      Path, clang::clangd::SymbolOrigin::Static,
       /*UseDex=*/true, /*SupportContainedRefs=*/false);
-  return Index;
 }
 
 clang::clangd::ClangdLSPServer::Options makeOptions(
     clang::clangd::SymbolIndex *SystemIndex) {
   clang::clangd::ClangdLSPServer::Options Options;
   Options.AsyncThreadsCount = 0;
-  Options.BuildDynamicSymbolIndex = false;
+  Options.BuildDynamicSymbolIndex = true;
   Options.BackgroundIndex = false;
   Options.UseDirBasedCDB = false;
-  Options.UseDirtyHeaders = false;
+  Options.UseDirtyHeaders = true;
   Options.StorePreamblesInMemory = true;
-  // Keep one idle AST globally. The broker already gives each editor a
-  // separate native filename, while the system index and sysroot stay shared.
+  // One editor per worker/session; keep one idle AST.
   Options.RetentionPolicy.MaxRetainedASTs = 1;
   Options.ResourceDir = "/lib/clang/" CLANG_VERSION_MAJOR_STRING;
   Options.StaticIndex = SystemIndex;
@@ -64,9 +64,11 @@ extern "C" {
 #ifdef __EMSCRIPTEN__
 EMSCRIPTEN_KEEPALIVE
 #endif
-int clangd_wasm_run() {
-  auto SystemIndex = loadSystemIndex();
-  if (!SystemIndex)
+// IndexPath is the mounted static index path, or "" for none. The dynamic
+// index still tracks the open document.
+int clangd_wasm_run(const char *IndexPath) {
+  auto SystemIndex = loadSystemIndex(IndexPath);
+  if (IndexPath != nullptr && IndexPath[0] != '\0' && !SystemIndex)
     return 2;
 
   clang::clangd::RealThreadsafeFS Filesystem;

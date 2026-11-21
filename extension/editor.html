@@ -26,6 +26,20 @@
       .ma-editor-page > .ma-editor-header .ma-status {
         margin: 0;
       }
+      .ma-editor-page [hidden] {
+        display: none !important;
+      }
+      .ma-editor-draft {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        align-items: center;
+        padding: 0 12px 10px;
+      }
+      .ma-editor-draft .ma-meta,
+      .ma-editor-draft .ma-status {
+        margin: 0;
+      }
       .ma-editor-host {
         flex: 1 1 auto;
         min-block-size: 0;
@@ -39,6 +53,17 @@
         <span class="ma-toolbar__spacer" aria-hidden="true"></span>
         <p id="ma-editor-status" class="ma-status" role="status"></p>
       </header>
+      <div class="ma-editor-draft">
+        <p id="ma-editor-draft-scope" class="ma-meta"></p>
+        <span class="ma-toolbar__spacer" aria-hidden="true"></span>
+        <p id="ma-editor-draft-status" class="ma-status" role="status" hidden></p>
+        <button
+          id="ma-draft-check"
+          class="m3e-button m3e-button--text"
+          type="button"
+          hidden
+        ></button>
+      </div>
     </div>
     <div id="ma-editor" class="ma-editor-host" data-monaco-anywhere-editor></div>
     <script type="module" src="editor.js"></script>

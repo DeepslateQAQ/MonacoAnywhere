@@ -1,0 +1,33 @@
+{
+  "schema": "monacoanywhere.catalogue/1",
+  "engineAbi": "ma-clangd-wasm/1",
+  "engineBuildId": "0427e50126edbd29e5a03caae6871be2658fd2ad77fc55c324ad9a1f7406b11e",
+  "packs": [
+    {
+      "id": "debian-gcc15.2-x86_64-linux-gnu",
+      "version": "2026.11.1",
+      "asset": "pack-debian-gcc15.2-x86_64-linux-gnu-2026.11.1.tar.gz",
+      "bytes": 5291849,
+      "sha256": "d56d1729ca4dd0f7a46b8f5b34df5e1e642e78a4e892b2bab93828a17a54190e",
+      "releaseTag": "data-2026.11.1",
+      "mirrors": [
+        "https://github.com/DeepslateQAQ/MonacoAnywhere/releases/download/{tag}/{asset}",
+        "https://gh-proxy.org/https://github.com/DeepslateQAQ/MonacoAnywhere/releases/download/{tag}/{asset}",
+        "https://ghproxy.net/https://github.com/DeepslateQAQ/MonacoAnywhere/releases/download/{tag}/{asset}"
+      ],
+      "toolchain": {
+        "targetTriple": "x86_64-linux-gnu",
+        "includeDirectories": [
+          "/sysroot/usr/include/c++/15",
+          "/sysroot/usr/include/x86_64-linux-gnu/c++/15",
+          "/sysroot/usr/include/x86_64-linux-gnu",
+          "/sysroot/usr/include"
+        ],
+        "gccVersion": "15.2.0",
+        "glibcVersion": "2.42",
+        "kernelVersion": "7.2.15"
+      },
+      "indexes": []
+    }
+  ]
+}

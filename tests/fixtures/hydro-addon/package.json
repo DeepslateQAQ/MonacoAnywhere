@@ -1,0 +1,30 @@
+{
+  "name": "@hydrooj/language-server",
+  "version": "0.0.2",
+  "main": "package.json",
+  "repository": "git@github.com:hydro-dev/language-server.git",
+  "author": "undefined <masnn0@outlook.com>",
+  "license": "AGPL-3.0-only",
+  "bin": "bin/hydro-language-server",
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.13.3",
+    "@types/ws": "^8.18.1",
+    "monaco-editor": "^0.57.0"
+  },
+  "dependencies": {
+    "@codingame/monaco-jsonrpc": "0.3.1",
+    "@hydrooj/utils": "^1.4.34-beta.3",
+    "esbuild-plugin-alias": "^0.2.1",
+    "js-yaml": "^5.4.2",
+    "monaco-languageclient": "0.18.1",
+    "ws": "^8.22.0",
+    "vscode-languageserver": "7.0.0"
+  },
+  "peerDependencies": {
+    "monaco-editor": ">=0.45.0"
+  },
+  "resolutions": {
+    "vscode-languageserver": "7.0.0"
+  }
+}

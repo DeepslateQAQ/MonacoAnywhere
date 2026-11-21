@@ -1,0 +1,224 @@
+--- a/frontend/lsp.lazy.ts
++++ b/frontend/lsp.lazy.ts
+@@ -12,23 +12,109 @@
+ const baseUrl = `${endpoint}/lsp/`;
+ let loaded = false;
+ 
++export const PATCH_PROTOCOL = 1;
++export const PATCH_VERSION = '1.0.0';
++export const UPSTREAM_REVISION = 'dbcbfc5fac360fa7d76302e8716382c764190cf1';
++
++type ProviderStatus = 'running' | 'suspended';
++
++export interface CooperativeProvider {
++  status(): ProviderStatus;
++  suspend(): Promise<void>;
++  resume(): Promise<void>;
++}
++
+ export function apply(monaco: typeof import('monaco-editor')) {
+   if (loaded) return;
+   loaded = true;
+   MonacoServices.install(monaco);
+ 
++  let bridgeInstalled = false;
++  let cppProvider: CooperativeProvider | null = null;
++
++  function installBridge() {
++    if (bridgeInstalled) return;
++    bridgeInstalled = true;
++    window.addEventListener('message', (event) => {
++      if (event.source !== window) return;
++      const data = event.data;
++      if (!data || data.__ma !== 1 || typeof data.type !== 'string') return;
++      const reply = (type: string, extra: Record<string, unknown> = {}) => {
++        window.postMessage({ __ma: 1, type, ...extra }, window.location.origin);
++      };
++      const status = () => cppProvider ? cppProvider.status() : 'unsupported';
++      if (data.type === 'ma/lsp-hello') {
++        reply('ma/lsp-status', {
++          protocol: PATCH_PROTOCOL,
++          patchVersion: PATCH_VERSION,
++          upstreamRevision: UPSTREAM_REVISION,
++          state: status(),
++        });
++        return;
++      }
++      if (data.type !== 'ma/lsp-suspend-cpp' && data.type !== 'ma/lsp-resume-cpp') return;
++      if (!cppProvider) {
++        reply('ma/lsp-status', {
++          protocol: PATCH_PROTOCOL,
++          patchVersion: PATCH_VERSION,
++          upstreamRevision: UPSTREAM_REVISION,
++          state: 'unsupported',
++        });
++        return;
++      }
++      const operation = data.type === 'ma/lsp-suspend-cpp'
++        ? cppProvider.suspend()
++        : cppProvider.resume();
++      void operation.then(
++        () => reply('ma/lsp-status', {
++          protocol: PATCH_PROTOCOL,
++          patchVersion: PATCH_VERSION,
++          upstreamRevision: UPSTREAM_REVISION,
++          state: status(),
++        }),
++        (error: unknown) => reply('ma/lsp-error', {
++          message: error instanceof Error ? error.message : String(error),
++        }),
++      );
++    });
++  }
++
+   function registerLspProvider(
+     name: string, languages: string[], documentSelector: string[],
+     url: string, args: (model: editor.IModel) => any = () => ({}),
+-  ) {
+-    let webSocket: Socket;
+-    const connected = () => webSocket && webSocket?.sock.readyState === webSocket?.sock.OPEN;
+-    function addModel(model: editor.IModel) {
+-      if (!languages.includes(model.getLanguageId().toLowerCase()) || connected()) return;
++    cooperative = false,
++  ): CooperativeProvider | null {
++    let webSocket: Socket | null = null;
++    let languageClient: MonacoLanguageClient | null = null;
++    let suspended = false;
++    let visibilityTimer: ReturnType<typeof setTimeout> | null = null;
++    const connected = () => !!webSocket && webSocket.sock.readyState === webSocket.sock.OPEN;
++
++    function clearVisibilityTimer() {
++      if (visibilityTimer) clearTimeout(visibilityTimer);
++      visibilityTimer = null;
++    }
++
++    async function stopConnection() {
++      clearVisibilityTimer();
++      const client = languageClient;
++      const socket = webSocket;
++      languageClient = null;
++      webSocket = null;
++      if (client) await client.stop();
++      if (socket) socket.close();
++    }
++
++    function openModel(model: editor.IModel) {
++      if (suspended || !languages.includes(model.getLanguageId().toLowerCase()) || connected()) return;
+       webSocket = new Socket(`${url}?${encodeURIComponent(JSON.stringify(args(model)))}`, true);
+       listen({
+         webSocket: webSocket as any,
+         onConnection: (connection) => {
++          if (suspended) {
++            connection.dispose();
++            return;
++          }
+           const languageClient = new MonacoLanguageClient({
+             name,
+             clientOptions: {
+@@ -43,64 +129,88 @@
+             },
+           });
+           languageClient.start();
+-          webSocket.onclose = async () => {
++          webSocket && (webSocket.onclose = async () => {
+             await languageClient.stop();
+             connection.end();
+-          };
++          });
+         },
+       });
+     }
+-    monaco.editor.onDidCreateModel(addModel);
++
++    monaco.editor.onDidCreateModel((model) => {
++      if (!suspended) openModel(model);
++    });
+     monaco.editor.onWillDisposeModel((model) => {
+       if (languages.includes(model.getLanguageId().toLowerCase()) && connected()) {
+-        webSocket.close();
++        void stopConnection();
+       }
+     });
+     monaco.editor.onDidChangeModelLanguage(({ model, oldLanguage }) => {
+       if (languages.includes(oldLanguage) && connected()) {
+-        webSocket.close();
+-      } else if (languages.includes(model.getLanguageId()) && !connected()) {
+-        addModel(model);
++        void stopConnection();
++      } else if (!suspended && languages.includes(model.getLanguageId()) && !connected()) {
++        openModel(model);
+       }
+     });
+ 
+-    let t: NodeJS.Timeout | null = null;
+     document.addEventListener('visibilitychange', () => {
+-      if (!webSocket) return;
++      if (suspended || !webSocket) return;
+       // FIXME Alt-Tab will temporarily make the visibilityState to visible
+       if (document.visibilityState === 'visible' && !connected()) {
+-        if (t) clearTimeout(t);
+-        t = setTimeout(() => {
+-          if (document.visibilityState === 'visible' && !connected()) {
++        clearVisibilityTimer();
++        visibilityTimer = setTimeout(() => {
++          if (!suspended && document.visibilityState === 'visible' && !connected()) {
+             console.log('Resume language server');
+-            webSocket.sock.reconnect();
++            webSocket?.sock.reconnect();
+           }
+         }, 5000);
+       } else if (document.visibilityState === 'hidden' && connected()) {
+-        if (t) clearTimeout(t);
+-        t = setTimeout(() => {
+-          if (document.visibilityState === 'hidden' && connected()) {
++        clearVisibilityTimer();
++        visibilityTimer = setTimeout(() => {
++          if (!suspended && document.visibilityState === 'hidden' && connected()) {
+             console.log('Pause language server');
+-            webSocket.sock.close();
++            webSocket?.sock.close();
+           }
+         }, 30000);
+       }
+     });
++
++    const provider: CooperativeProvider = {
++      status: () => (suspended ? 'suspended' : 'running'),
++      async suspend() {
++        if (!cooperative) throw new Error('This language provider is not cooperative');
++        if (suspended) return;
++        suspended = true;
++        await stopConnection();
++      },
++      async resume() {
++        if (!cooperative || !suspended) return;
++        suspended = false;
++        for (const model of monaco.editor.getModels()) {
++          if (languages.includes(model.getLanguageId().toLowerCase()) && !connected()) {
++            openModel(model);
++          }
++        }
++      },
++    };
++    return provider;
+   }
+ 
+   registerLspProvider(
+     'Python Language Client', ['python'], ['python', '.py', '.py2', '.py3'],
+     `${baseUrl}python/websocket`,
+   );
+-  registerLspProvider(
++  cppProvider = registerLspProvider(
+     'Cpp Language Client', ['cpp', 'c'], ['.cpp', 'cpp', '.c', 'c'],
+     `${baseUrl}cpp/websocket`, (model) => ({
+       style: UserContext.formatStyle,
+       lang: model.getLanguageId() === 'c' ? 'c' : 'c++',
+     }),
++    true,
+   );
+   registerLspProvider(
+     'Java Language Client', ['java'], ['java', '.java'],
+     `${baseUrl}java/websocket`,
+   );
++  installBridge();
+ }

@@ -1,0 +1,14 @@
+{
+  "package": "@hydrooj/language-server",
+  "version": "0.0.2",
+  "upstreamRevision": "dbcbfc5fac360fa7d76302e8716382c764190cf1",
+  "blobSha1": {
+    "frontend/lsp.lazy.ts": "c695b069cc213b341e7d7ed7cd24b25842891032"
+  },
+  "patchedBlobSha1": {
+    "frontend/lsp.lazy.ts": "601f22738ba6468b2ab42910e6b51b303c90ca70"
+  },
+  "hydroFrontend": ">=4.59.1",
+  "patchVersion": "1.0.0",
+  "protocol": 1
+}

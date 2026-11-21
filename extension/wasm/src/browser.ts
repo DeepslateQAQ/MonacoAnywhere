@@ -1,139 +1,171 @@
-import { normalizeCompilerArguments } from "./compiler-arguments.js";
 import { isClangdWasmSupported } from "./support.js";
 
-export interface OpenClangdSessionOptions {
-  compilerArguments?: string | readonly string[];
+export interface MountFile {
+  /** Absolute path inside the Emscripten filesystem. */
+  path: string;
+  bytes: ArrayBuffer;
+}
+
+export interface OpenSessionOptions {
+  /** Extension-origin URLs for the packaged runtime. */
+  workerUrl: string;
+  runtimeUrl: string;
+  wasmUrl: string;
+  dataUrl: string;
+  /** Static index content, or null for dynamic indexing only. */
+  index?: { path: string; bytes: ArrayBuffer } | null;
+  files: MountFile[];
   signal?: AbortSignal;
-  uri: string;
 }
 
-export interface ClangdSession {
-  /** Settles if the shared native clangd runtime terminates unexpectedly. */
-  closed: Promise<Error>;
-  dispose(): void;
-  port: MessagePort;
+export interface ClangdWasmSession {
+  send(message: object): void;
+  onMessage(callback: (message: unknown) => void): () => void;
+  onClose(callback: (reason: string) => void): () => void;
+  readFile(path: string): Promise<Uint8Array | null>;
+  dispose(): Promise<void>;
 }
 
-const ATTACH_TIMEOUT_MS = 10_000;
+const OPEN_TIMEOUT_MS = 120_000;
+const DISPOSE_TIMEOUT_MS = 2_000;
 
-/** Opens one document session on the package's singleton clangd SharedWorker. */
-export async function openClangdSession(
-  options: OpenClangdSessionOptions,
-): Promise<ClangdSession> {
-  const { signal } = options;
+/** Opens one dedicated Worker with its own clangd instance. */
+export async function openSession(
+  options: OpenSessionOptions,
+): Promise<ClangdWasmSession> {
   if (!isClangdWasmSupported()) {
-    throw new Error("Local C++ language services are not supported here");
+    throw new Error("This browser does not support the WASM clangd engine");
   }
-  signal?.throwIfAborted();
-  const compilerArguments = normalizeCompilerArguments(
-    options.compilerArguments,
-  );
+  options.signal?.throwIfAborted();
 
-  // The URL must stay inline for bundlers to detect and bundle the worker.
-  const worker = new SharedWorker(
-    new URL("./clangd.shared-worker.js", import.meta.url),
-    { name: "algopro-clangd", type: "module" },
-  );
-  const port = worker.port;
-  const life = new AbortController();
-  const opened = deferred<void>();
-  const closed = deferred<Error>();
-  const lockAcquired = deferred<void>();
-  const lockReleased = deferred<void>();
-  let attachTimer: ReturnType<typeof setTimeout> | undefined;
+  const worker = new Worker(options.workerUrl, { type: "module" });
+  const channel = new MessageChannel();
+  const messageListeners = new Set<(message: unknown) => void>();
+  const closeListeners = new Set<(reason: string) => void>();
+  const pendingReads = new Map<
+    number,
+    { resolve: (bytes: Uint8Array | null) => void; reject: (error: Error) => void }
+  >();
+  let nextReadId = 1;
+  let closed = false;
+  const ready = Promise.withResolvers<void>();
+  const terminated = Promise.withResolvers<void>();
+  const openTimer = setTimeout(() => {
+    ready.reject(new Error("clangd engine did not start in time"));
+  }, OPEN_TIMEOUT_MS);
 
-  const dispose = () => {
-    if (life.signal.aborted) return;
-    life.abort();
-    clearTimeout(attachTimer);
-    port.postMessage({ type: "algopro/clangd-detach" });
-    port.close();
-    lockReleased.resolve();
+  const settleClose = (reason: string) => {
+    if (closed) return;
+    closed = true;
+    clearTimeout(openTimer);
+    ready.reject(new Error(reason));
+    terminated.resolve();
+    for (const entry of pendingReads.values()) entry.resolve(null);
+    pendingReads.clear();
+    for (const listener of closeListeners) listener(reason);
+    worker.terminate();
+    channel.port1.close();
+    channel.port2.close();
   };
-  const fail = (error: Error) => {
-    closed.resolve(error);
-    opened.reject(error);
-    dispose();
-  };
 
-  // The worker detaches this session when the lock is released, which also
-  // happens when the page closes or reloads without calling dispose().
-  const lock = `algopro-clangd-session-${crypto.randomUUID()}`;
-  navigator.locks
-    .request(lock, () => {
-      lockAcquired.resolve();
-      return lockReleased.promise;
-    })
-    .catch(lockAcquired.reject);
+  worker.addEventListener("error", (event) => {
+    settleClose(event.message || "clangd worker crashed");
+  });
+  worker.addEventListener("messageerror", () => {
+    settleClose("unreadable clangd worker message");
+  });
+
+  channel.port1.addEventListener("message", (event: MessageEvent) => {
+    const data = event.data as
+      | { type: "ready" }
+      | { type: "message"; json: string }
+      | { type: "error"; message: string }
+      | { type: "exit"; code: number }
+      | { type: "readFileResult"; id: number; bytes?: Uint8Array; error?: string };
+    switch (data.type) {
+      case "ready":
+        clearTimeout(openTimer);
+        ready.resolve();
+        break;
+      case "message":
+        try {
+          const parsed: unknown = JSON.parse(data.json);
+          for (const listener of messageListeners) listener(parsed);
+        } catch {
+          settleClose("clangd worker sent invalid JSON");
+        }
+        break;
+      case "error":
+        settleClose(data.message);
+        break;
+      case "exit":
+        settleClose(`clangd stopped (exit code ${data.code})`);
+        break;
+      case "readFileResult": {
+        const entry = pendingReads.get(data.id);
+        if (!entry) break;
+        pendingReads.delete(data.id);
+        if (data.error || !data.bytes) {
+          entry.resolve(null);
+        } else {
+          entry.resolve(data.bytes);
+        }
+        break;
+      }
+    }
+  });
+  channel.port1.start();
+
+  const dispose = async (): Promise<void> => {
+    if (closed) return;
+    worker.postMessage({ type: "stop" } satisfies { type: "stop" });
+    const timeout = Promise.withResolvers<void>();
+    const timer = setTimeout(timeout.resolve, DISPOSE_TIMEOUT_MS);
+    await Promise.race([terminated.promise, timeout.promise]);
+    clearTimeout(timer);
+    settleClose("session disposed");
+  };
 
   try {
-    await lockAcquired.promise;
-    signal?.throwIfAborted();
-    signal?.addEventListener("abort", () => opened.reject(signal.reason), {
-      once: true,
-      signal: life.signal,
-    });
-    worker.addEventListener(
-      "error",
-      (event) => fail(new Error(event.message || "clangd worker failed")),
-      { signal: life.signal },
-    );
-    port.addEventListener(
-      "messageerror",
-      () => fail(new Error("Could not read a clangd worker message")),
-      { signal: life.signal },
-    );
-    port.addEventListener(
-      "message",
-      (event: MessageEvent) => {
-        const data = event.data;
-        switch (data?.type) {
-          case "algopro/clangd-attached":
-            clearTimeout(attachTimer);
-            break;
-          case "algopro/clangd-ready":
-            opened.resolve();
-            break;
-          case "algopro/clangd-error":
-            opened.reject(new Error(data.message));
-            break;
-          case "algopro/clangd-closed":
-            // Consumers' readers are attached after this listener and must not
-            // see the control message.
-            event.stopImmediatePropagation();
-            fail(new Error(data.message));
-            break;
-        }
+    worker.postMessage(
+      {
+        type: "init",
+        runtimeUrl: options.runtimeUrl,
+        wasmUrl: options.wasmUrl,
+        dataUrl: options.dataUrl,
+        indexPath: options.index?.path ?? null,
+        indexBytes: options.index?.bytes ?? null,
+        files: options.files,
       },
-      { signal: life.signal },
+      [channel.port2, ...options.files.map((file) => file.bytes)],
     );
-    port.start();
-    attachTimer = setTimeout(
-      () =>
-        opened.reject(new Error("Local C++ language service did not respond")),
-      ATTACH_TIMEOUT_MS,
-    );
-    port.postMessage({
-      type: "algopro/clangd-attach",
-      lock,
-      compilerArguments,
-      uri: options.uri,
-    });
-    await opened.promise;
-    signal?.throwIfAborted();
+    await ready.promise;
   } catch (error) {
-    dispose();
+    await dispose();
     throw error;
   }
-  return { closed: closed.promise, port, dispose };
-}
 
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (reason: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, reject, resolve };
+  return {
+    send(message: object) {
+      if (closed) return;
+      worker.postMessage({ type: "send", json: JSON.stringify(message) });
+    },
+    onMessage(callback) {
+      messageListeners.add(callback);
+      return () => messageListeners.delete(callback);
+    },
+    onClose(callback) {
+      closeListeners.add(callback);
+      return () => closeListeners.delete(callback);
+    },
+    readFile(path: string) {
+      if (closed) return Promise.resolve(null);
+      const id = nextReadId++;
+      const result = Promise.withResolvers<Uint8Array | null>();
+      pendingReads.set(id, result);
+      worker.postMessage({ type: "readFile", id, path });
+      return result.promise;
+    },
+    dispose,
+  };
 }
