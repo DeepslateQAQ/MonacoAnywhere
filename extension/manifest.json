@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "name": "MonacoAnywhere",
+  "short_name": "MonacoAnywhere",
+  "version": "0.1.0",
+  "description": "Monaco editor and real C++ language services for online judge editors. Chromium desktop only.",
+  "minimum_chrome_version": "137",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzZVfDrvJ9x2OCmQgRx4qfltuzXELfJKAnlT75etrykq3x8uTnK/UmIeq+fRLv56kI7+oM3mNebN6jfiWA4Tx/g9mpVqV6fIaj3Ok4A1LSEyhVFnocNW4iU3cmqaKktTTCcOQ7km/WwlF//1dJ8KP1cXEHnPwPoW6m24eUTvBVXvPq2zb1HuadN8bTcgbGYPsKM/L8AtQoROM8vRm3gfMFrwcq7lyc6vnTpIDgha32PNHKy71IdBbEESWN26XB5FFqzAI8GQVk5/GWgCtntypWVd3p2WUpeAG6L1nDZsoEfzFsltVlDfObikYIw9CntoOP08nlXVOVBmtfIm/m6s/aQIDAQAB",
+  "permissions": [
+    "storage",
+    "scripting",
+    "nativeMessaging",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "https://*.luogu.com.cn/*",
+    "https://*.luogu.org/*",
+    "https://atcoder.jp/*",
+    "https://codeforces.com/*",
+    "https://*.hydro.ac/*"
+  ],
+  "optional_host_permissions": [
+    "*://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "MonacoAnywhere",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "editor.html",
+        "editor.js",
+        "editor.css",
+        "workers/*",
+        "assets/*",
+        "fonts/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; worker-src 'self'; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:* https://github.com https://objects.githubusercontent.com https://release-assets.githubusercontent.com https://gh-proxy.org https://ghfast.top https://ghproxy.net"
+  }
+}

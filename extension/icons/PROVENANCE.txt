@@ -1,0 +1,28 @@
+Material Symbols subset provenance and license
+
+Upstream project: Google Material Design Icons / Material Symbols
+Version: Material Symbols 2.975
+Upstream commit: 49d4db35df873165d6bd6ba09b063c7dafbac2f4
+Upstream path: variablefont (Material Symbols Rounded)
+Project: https://github.com/google/material-design-icons
+
+Subset source (build-time only):
+https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=code,settings,download,check,close,error,info,pause,play_arrow,terminal,sync
+
+The requested WOFF2 was downloaded during the build and committed locally as
+extension/fonts/material-symbols-rounded-subset.woff2.
+
+Exact downloaded response (Google Fonts kit v386):
+https://fonts.gstatic.com/l/font?kit=sykg-zNym6YjUruM-QrEh7-nyTnjDwKNJ_190FjzarEaXoBEWN6na3e5Pryx4dcOC0WrjYpwk3DzcwmqmqIQqyrYtGNtLKSnmrdY0po&skey=70ddea8fe54d532e&v=v386
+
+Font metadata: family "Material Symbols Rounded", TrueType in WOFF2, 14780 bytes.
+
+Subset SHA-256:
+6145d957955454c45e8518468db279a49b481646e022bfdf9e5347574c3231a8
+
+Glyphs included:
+code, settings, download, check, close, error, info, pause, play_arrow,
+terminal, sync
+
+License: Apache License 2.0; see LICENSE-material-symbols.txt.
+The extension makes no runtime request to Google Fonts.

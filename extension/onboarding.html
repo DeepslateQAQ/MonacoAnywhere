@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="onboarding.pageTitle"></title>
+    <link rel="stylesheet" href="theme.css" />
+    <style>
+      .ma-ui {
+        min-block-size: 100vh;
+      }
+      .ma-ui [hidden] {
+        display: none !important;
+      }
+      .ma-ui #ma-backend-guidance {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .ma-ui .ma-choice {
+        display: flex;
+        align-items: flex-start;
+        padding: 14px 16px;
+        border: 1px solid var(--m3e-sys-color-outline-variant);
+        border-radius: var(--m3e-sys-shape-corner-medium);
+        background-color: var(--m3e-sys-color-surface-container-low);
+      }
+      .ma-ui .ma-choice:has(.m3e-radio-button__input:checked) {
+        border-color: var(--m3e-sys-color-primary);
+        box-shadow: inset 0 0 0 1px var(--m3e-sys-color-primary);
+      }
+      .ma-ui .ma-choice__text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-block-start: 8px;
+      }
+      .ma-ui .ma-choice__text strong {
+        font-weight: var(--m3e-sys-typescale-label-large-weight);
+      }
+      .ma-ui .ma-choice__description {
+        color: var(--m3e-sys-color-on-surface-variant);
+        font-size: var(--m3e-sys-typescale-body-small-size);
+        line-height: var(--m3e-sys-typescale-body-small-line-height);
+      }
+      .ma-ui .ma-validation {
+        display: grid;
+        gap: 12px;
+      }
+      .ma-ui .ma-command {
+        margin: 0;
+        padding: 12px;
+        overflow: auto;
+        border-radius: var(--m3e-sys-shape-corner-medium);
+        background-color: var(--m3e-sys-color-surface-container);
+        color: var(--m3e-sys-color-on-surface);
+        font-size: var(--m3e-sys-typescale-body-small-size);
+      }
+      .ma-ui progress {
+        inline-size: 100%;
+        block-size: 8px;
+      }
+      .ma-ui .ma-stepper > li > strong {
+        font-weight: inherit;
+      }
+    </style>
+  </head>
+  <body class="ma-ui">
+    <main class="ma-shell" aria-labelledby="ma-title">
+      <header>
+        <p class="ma-eyebrow" id="ma-build-mode"></p>
+        <h1 id="ma-title" data-i18n="onboarding.title"></h1>
+        <p class="ma-intro" data-i18n="onboarding.intro"></p>
+      </header>
+
+      <ol class="ma-stepper" data-i18n-aria-label="onboarding.steps.ariaLabel">
+        <li id="ma-step-marker-1" aria-current="step">
+          <span>1</span>
+          <strong data-i18n="onboarding.steps.backend"></strong>
+        </li>
+        <li id="ma-step-marker-2">
+          <span>2</span>
+          <strong data-i18n="onboarding.steps.resources"></strong>
+        </li>
+        <li id="ma-step-marker-3">
+          <span>3</span>
+          <strong data-i18n="onboarding.steps.validation"></strong>
+        </li>
+        <li id="ma-step-marker-4">
+          <span>4</span>
+          <strong data-i18n="onboarding.steps.complete"></strong>
+        </li>
+      </ol>
+
+      <section id="ma-step-1" class="ma-card" aria-labelledby="ma-step-1-title">
+        <h2 id="ma-step-1-title" data-i18n="onboarding.choose.title"></h2>
+        <fieldset class="m3e-radio-group">
+          <legend data-i18n="onboarding.choose.legend"></legend>
+          <label class="ma-choice m3e-radio-button">
+            <input
+              class="m3e-radio-button__input"
+              type="radio"
+              name="ma-backend"
+              value="wasm"
+            />
+            <span class="m3e-radio-button__icon" aria-hidden="true"></span>
+            <span class="m3e-radio-button__state" aria-hidden="true"></span>
+            <span class="m3e-radio-button__label ma-choice__text">
+              <strong data-i18n="onboarding.backend.wasm.title"></strong>
+              <span
+                class="ma-choice__description"
+                data-i18n="onboarding.backend.wasm.description"
+              ></span>
+            </span>
+          </label>
+          <label class="ma-choice m3e-radio-button">
+            <input
+              class="m3e-radio-button__input"
+              type="radio"
+              name="ma-backend"
+              value="native"
+            />
+            <span class="m3e-radio-button__icon" aria-hidden="true"></span>
+            <span class="m3e-radio-button__state" aria-hidden="true"></span>
+            <span class="m3e-radio-button__label ma-choice__text">
+              <strong data-i18n="onboarding.backend.native.title"></strong>
+              <span
+                class="ma-choice__description"
+                data-i18n="onboarding.backend.native.description"
+              ></span>
+            </span>
+          </label>
+        </fieldset>
+        <p class="ma-hint" data-i18n="onboarding.choose.hint"></p>
+        <div class="ma-actions">
+          <button
+            id="ma-next-1"
+            class="m3e-button m3e-button--size-m"
+            type="button"
+            data-i18n="common.continue"
+          ></button>
+        </div>
+      </section>
+
+      <section id="ma-step-2" class="ma-card" aria-labelledby="ma-step-2-title" hidden>
+        <h2 id="ma-step-2-title" data-i18n="onboarding.resources.title"></h2>
+        <div id="ma-backend-guidance"></div>
+        <div class="ma-validation">
+          <p id="ma-resource-description"></p>
+          <p id="ma-resource-status" class="ma-hint" role="status"></p>
+          <progress
+            id="ma-resource-progress"
+            aria-describedby="ma-resource-status"
+            hidden
+          ></progress>
+          <pre id="ma-resource-detail" class="ma-command" hidden></pre>
+          <div class="ma-actions">
+            <button
+              id="ma-resource-check"
+              class="m3e-button m3e-button--outlined m3e-button--size-m"
+              type="button"
+              data-i18n="onboarding.resources.install"
+            ></button>
+          </div>
+          <div id="ma-resource-extra"></div>
+        </div>
+        <div class="ma-note" data-i18n="onboarding.resources.note"></div>
+        <div class="ma-actions">
+          <button
+            id="ma-back-2"
+            class="m3e-button m3e-button--outlined m3e-button--size-m"
+            type="button"
+            data-i18n="common.back"
+          ></button>
+          <button
+            id="ma-next-2"
+            class="m3e-button m3e-button--size-m"
+            type="button"
+            disabled
+            data-i18n="common.continue"
+          ></button>
+        </div>
+      </section>
+
+      <section id="ma-step-3" class="ma-card" aria-labelledby="ma-step-3-title" hidden>
+        <h2 id="ma-step-3-title" data-i18n="onboarding.validation.title"></h2>
+        <div class="ma-validation">
+          <p id="ma-validation-description"></p>
+          <p id="ma-validation-status" class="ma-hint" role="status"></p>
+          <div class="ma-actions">
+            <button
+              id="ma-validate"
+              class="m3e-button m3e-button--outlined m3e-button--size-m"
+              type="button"
+              data-i18n="onboarding.validation.check"
+            ></button>
+            <button
+              id="ma-change-backend"
+              class="m3e-button m3e-button--text m3e-button--size-m"
+              type="button"
+              data-i18n="onboarding.validation.changeBackend"
+            ></button>
+          </div>
+        </div>
+        <div class="ma-note" data-i18n="onboarding.validation.completeNote"></div>
+        <div class="ma-actions">
+          <button
+            id="ma-back-3"
+            class="m3e-button m3e-button--outlined m3e-button--size-m"
+            type="button"
+            data-i18n="common.back"
+          ></button>
+          <button
+            id="ma-next-3"
+            class="m3e-button m3e-button--size-m"
+            type="button"
+            data-i18n="common.continue"
+          ></button>
+        </div>
+      </section>
+
+      <section id="ma-step-4" class="ma-card" aria-labelledby="ma-step-4-title" hidden>
+        <h2 id="ma-step-4-title" data-i18n="onboarding.complete.title"></h2>
+        <div class="ma-validation">
+          <p id="ma-complete-description"></p>
+          <p id="ma-complete-status" class="ma-hint" role="status"></p>
+          <button
+            id="ma-finish"
+            class="m3e-button m3e-button--size-m"
+            type="button"
+            disabled
+            data-i18n="onboarding.complete.finish"
+          ></button>
+        </div>
+        <div class="ma-note" data-i18n="onboarding.complete.requirements"></div>
+        <div class="ma-actions">
+          <button
+            id="ma-back-4"
+            class="m3e-button m3e-button--outlined m3e-button--size-m"
+            type="button"
+            data-i18n="common.back"
+          ></button>
+          <button
+            id="ma-open-options"
+            class="m3e-button m3e-button--text m3e-button--size-m"
+            type="button"
+            data-i18n="common.openOptions"
+          ></button>
+        </div>
+      </section>
+
+      <div id="ma-onboarding-status" class="ma-status" role="status" hidden></div>
+    </main>
+
+    <script type="module" src="onboarding.js"></script>
+  </body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Submit - Codeforces</title>
+  </head>
+  <body>
+    <nav class="nav-links">
+      <a href="/profile/tourist">tourist</a>
+      <a href="/problemset">Problemset</a>
+    </nav>
+
+    <form class="submit-form" action="/problemset/submit" method="post">
+      <input type="hidden" name="csrf_token" value="fixture-token">
+
+      <select name="programTypeId">
+        <option value="42">GNU G++11 5.1.0</option>
+        <option value="50">GNU G++14 6.4.0</option>
+        <option value="54">GNU G++17 7.3.0</option>
+        <option value="61">GNU G++17 9.2.0 (64 bit, msys 2)</option>
+        <option value="73">GNU G++20 11.2.0 (64 bit, winlibs)</option>
+        <option value="75">GNU GCC C11 5.1.0</option>
+        <option value="89">GNU G++20 13.2.0 (64 bit, winlibs)</option>
+        <option value="91" selected>GNU G++23 14.2.0 (64 bit, msys 2)</option>
+        <option value="43">GNU GCC C17 7.3.0</option>
+      </select>
+
+      <div id="editor" class="ace_editor"></div>
+      <textarea id="sourceCodeTextarea" name="sourceCode" style="display:none">int main() { return 0; }</textarea>
+      <button type="submit">Submit</button>
+    </form>
+  </body>
+</html>

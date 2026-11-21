@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Submit - AtCoder</title>
+  </head>
+  <body>
+    <nav class="navbar">
+      <a href="/users/alice">alice</a>
+      <a href="/contests/abc380">abc380</a>
+    </nav>
+
+    <div class="form-group">
+      <select id="select-task" name="data.TaskScreenName">
+        <option value="abc380_a" selected>Task A</option>
+        <option value="abc380_b">Task B</option>
+      </select>
+    </div>
+
+    <div id="editor" class="editor"></div>
+    <textarea id="plain-textarea" name="sourceCode" style="display:none">int main() { return 0; }</textarea>
+    <button type="button" class="btn-toggle-editor">Plain text editor</button>
+    <input type="checkbox" id="toggleEditorCheckbox">
+
+    <div id="select-lang">
+      <select name="data.LanguageId" class="current select2-hidden-accessible">
+        <option value="6017" selected>C++23 (GCC 15.2.0)</option>
+        <option value="6054">C++ IOI-Style(GNU++20) (GCC 14.2.0)</option>
+        <option value="6116">C++23 (Clang 21.1.0)</option>
+        <option value="5001">Python (CPython 3.11.4)</option>
+      </select>
+    </div>
+
+    <select class="select2-hidden-accessible" aria-hidden="true">
+      <option value="6017">C++23 (GCC 15.2.0)</option>
+      <option value="6054">C++ IOI-Style(GNU++20) (GCC 14.2.0)</option>
+    </select>
+    <select class="select2-hidden-accessible" aria-hidden="true">
+      <option value="6116">C++23 (Clang 21.1.0)</option>
+    </select>
+
+    <form action="/contests/abc380/submit" method="post">
+      <input type="hidden" name="csrf_token" value="fixture-token">
+      <button type="submit">Submit</button>
+    </form>
+  </body>
+</html>

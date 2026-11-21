@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="options.pageTitle"></title>
+    <link rel="stylesheet" href="theme.css" />
+    <style>
+      .ma-ui {
+        min-block-size: 100vh;
+      }
+      .ma-ui [hidden] {
+        display: none !important;
+      }
+      .ma-ui #ma-options-form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .ma-ui .m3e-text-field {
+        min-inline-size: 0;
+      }
+      .ma-ui .ma-select {
+        appearance: auto;
+      }
+      .ma-ui .ma-textarea {
+        min-block-size: 96px;
+        resize: vertical;
+      }
+      .ma-ui .ma-loading-slot {
+        display: flex;
+        justify-content: center;
+        padding: 8px;
+      }
+      .ma-ui .ma-loading-slot:empty {
+        display: none;
+      }
+    </style>
+  </head>
+  <body class="ma-ui">
+    <main class="ma-shell" aria-labelledby="ma-title">
+      <header>
+        <p class="ma-eyebrow" id="ma-build-mode"></p>
+        <h1 id="ma-title" data-i18n="options.title"></h1>
+        <p class="ma-intro" data-i18n="options.intro"></p>
+      </header>
+
+      <div id="ma-options-loading" class="ma-loading-slot"></div>
+
+      <section class="ma-card">
+        <h2 data-i18n="options.services.title"></h2>
+        <form id="ma-options-form">
+          <div class="ma-grid">
+            <label
+              class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
+            >
+              <span
+                class="m3e-text-field__label"
+                data-i18n="options.backend.label"
+              ></span>
+              <span class="m3e-text-field__container">
+                <select id="ma-backend" class="m3e-text-field__input ma-select">
+                  <option value="" data-i18n="options.backend.none"></option>
+                  <option value="wasm" data-i18n="options.backend.wasm"></option>
+                  <option value="native" data-i18n="options.backend.native"></option>
+                </select>
+                <span class="m3e-text-field__outline"></span>
+              </span>
+              <span class="m3e-text-field__supporting">
+                <span
+                  class="m3e-text-field__supporting-text"
+                  data-i18n="options.backend.help"
+                ></span>
+              </span>
+            </label>
+
+            <label
+              class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
+            >
+              <span
+                class="m3e-text-field__label"
+                data-i18n="options.theme.label"
+              ></span>
+              <span class="m3e-text-field__container">
+                <select id="ma-theme" class="m3e-text-field__input ma-select">
+                  <option value="system" data-i18n="options.theme.system"></option>
+                  <option value="light" data-i18n="options.theme.light"></option>
+                  <option value="dark" data-i18n="options.theme.dark"></option>
+                </select>
+                <span class="m3e-text-field__outline"></span>
+              </span>
+            </label>
+
+            <label
+              class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
+            >
+              <span
+                class="m3e-text-field__label"
+                data-i18n="options.locale.label"
+              ></span>
+              <span class="m3e-text-field__container">
+                <select id="ma-locale" class="m3e-text-field__input ma-select">
+                  <option value="auto" data-i18n="options.locale.auto"></option>
+                  <option value="zh-CN" data-i18n="options.locale.zh"></option>
+                  <option value="en" data-i18n="options.locale.en"></option>
+                </select>
+                <span class="m3e-text-field__outline"></span>
+              </span>
+            </label>
+
+            <label
+              class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
+            >
+              <span
+                class="m3e-text-field__label"
+                data-i18n="options.hiddenPause.label"
+              ></span>
+              <span class="m3e-text-field__container">
+                <input
+                  id="ma-hidden-pause"
+                  class="m3e-text-field__input"
+                  type="number"
+                  min="1000"
+                  max="86400000"
+                  step="1000"
+                  inputmode="numeric"
+                />
+                <span class="m3e-text-field__outline"></span>
+              </span>
+              <span class="m3e-text-field__supporting">
+                <span
+                  class="m3e-text-field__supporting-text"
+                  data-i18n="options.hiddenPause.help"
+                ></span>
+              </span>
+            </label>
+
+            <label
+              class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
+            >
+              <span
+                class="m3e-text-field__label"
+                data-i18n="options.clangdPath.label"
+              ></span>
+              <span class="m3e-text-field__container">
+                <input
+                  id="ma-clangd-path"
+                  class="m3e-text-field__input"
+                  type="text"
+                  autocomplete="off"
+                  spellcheck="false"
+                  data-i18n-placeholder="options.clangdPath.placeholder"
+                />
+                <span class="m3e-text-field__outline"></span>
+              </span>
+              <span class="m3e-text-field__supporting">
+                <span
+                  class="m3e-text-field__supporting-text"
+                  data-i18n="options.clangdPath.help"
+                ></span>
+              </span>
+            </label>
+
+            <label
+              class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
+            >
+              <span
+                class="m3e-text-field__label"
+                data-i18n="options.editorFont.label"
+              ></span>
+              <span class="m3e-text-field__container">
+                <input
+                  id="ma-editor-font"
+                  class="m3e-text-field__input"
+                  type="text"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="monospace"
+                />
+                <span class="m3e-text-field__outline"></span>
+              </span>
+              <span class="m3e-text-field__supporting">
+                <span
+                  class="m3e-text-field__supporting-text"
+                  data-i18n="options.editorFont.help"
+                ></span>
+              </span>
+            </label>
+
+            <label
+              class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
+            >
+              <span
+                class="m3e-text-field__label"
+                data-i18n="options.editorTheme.label"
+              ></span>
+              <span class="m3e-text-field__container">
+                <select
+                  id="ma-editor-theme"
+                  class="m3e-text-field__input"
+                ></select>
+                <span class="m3e-text-field__outline"></span>
+              </span>
+            </label>
+          </div>
+
+          <fieldset>
+            <legend data-i18n="options.advanced.legend"></legend>
+            <div class="ma-grid">
+              <label
+                class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
+              >
+                <span
+                  class="m3e-text-field__label"
+                  data-i18n="options.queryDriver.label"
+                ></span>
+                <span class="m3e-text-field__container">
+                  <textarea
+                    id="ma-query-driver"
+                    class="m3e-text-field__input ma-textarea"
+                    spellcheck="false"
+                    data-i18n-placeholder="options.queryDriver.placeholder"
+                  ></textarea>
+                  <span class="m3e-text-field__outline"></span>
+                </span>
+                <span class="m3e-text-field__supporting">
+                  <span
+                    class="m3e-text-field__supporting-text"
+                    data-i18n="options.queryDriver.help"
+                  ></span>
+                </span>
+              </label>
+
+              <label
+                class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
+              >
+                <span
+                  class="m3e-text-field__label"
+                  data-i18n="options.extraIncludes.label"
+                ></span>
+                <span class="m3e-text-field__container">
+                  <textarea
+                    id="ma-extra-includes"
+                    class="m3e-text-field__input ma-textarea"
+                    spellcheck="false"
+                    data-i18n-placeholder="options.extraIncludes.placeholder"
+                  ></textarea>
+                  <span class="m3e-text-field__outline"></span>
+                </span>
+                <span class="m3e-text-field__supporting">
+                  <span
+                    class="m3e-text-field__supporting-text"
+                    data-i18n="options.extraIncludes.help"
+                  ></span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="ma-actions">
+            <button
+              class="m3e-button m3e-button--size-m"
+              type="submit"
+              data-i18n="options.save"
+            ></button>
+            <button
+              id="ma-open-setup"
+              class="m3e-button m3e-button--outlined m3e-button--size-m"
+              type="button"
+              data-i18n="options.openSetup"
+            ></button>
+          </div>
+        </form>
+
+        <div id="ma-options-status" class="ma-status" role="status" hidden></div>
+      </section>
+
+      <section class="ma-card" aria-labelledby="ma-state-title">
+        <h2 id="ma-state-title" data-i18n="options.state.title"></h2>
+        <p id="ma-oobe-state"></p>
+        <p id="ma-site-overrides" class="ma-meta"></p>
+        <button
+          id="ma-reset-sites"
+          class="m3e-button m3e-button--text"
+          type="button"
+          data-i18n="options.resetSites"
+        ></button>
+        <p class="ma-note" data-i18n="options.state.note"></p>
+        <p class="ma-meta">
+          <span data-i18n="common.extensionId"></span>:
+          <code id="ma-extension-id"></code>
+        </p>
+      </section>
+    </main>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

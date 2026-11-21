@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="editor.pageTitle"></title>
+    <link rel="stylesheet" href="editor.css" />
+    <link rel="stylesheet" href="theme.css" />
+    <style>
+      .ma-editor-page {
+        display: flex;
+        flex-direction: column;
+        block-size: 100vh;
+        margin: 0;
+        overflow: hidden;
+        background: #ffffff;
+      }
+      @media (prefers-color-scheme: dark) {
+        .ma-editor-page {
+          background: #1e1e1e;
+        }
+      }
+      .ma-editor-page > .ma-editor-header {
+        position: relative;
+        flex: 0 0 auto;
+        border-bottom: 1px solid var(--m3e-sys-color-outline-variant);
+        background: var(--m3e-sys-color-surface-container-low);
+      }
+      .ma-editor-page .ma-editor-header .ma-toolbar {
+        gap: 8px;
+        align-items: baseline;
+        min-height: 0;
+        padding: 7px 12px 3px;
+        background: transparent;
+      }
+      .ma-editor-page .ma-editor-header .ma-toolbar h1 {
+        margin: 0;
+        color: var(--m3e-sys-color-on-surface);
+        font-size: 14px;
+        font-weight: 650;
+        line-height: 20px;
+        letter-spacing: 0;
+        white-space: nowrap;
+      }
+      .ma-editor-page .ma-editor-header .ma-toolbar h1 .ma-version {
+        margin-inline-start: 7px;
+        color: var(--m3e-sys-color-on-surface-variant);
+        font-size: 11px;
+        font-weight: 400;
+      }
+      .ma-editor-page > .ma-editor-header #ma-editor-status {
+        min-inline-size: 0;
+        max-inline-size: 62%;
+        overflow: hidden;
+        color: var(--m3e-sys-color-on-surface-variant);
+        font-size: 11.5px;
+        line-height: 16px;
+        text-align: end;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .ma-editor-page > .ma-editor-header .ma-status {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: none;
+      }
+      .ma-editor-page > .ma-editor-header #ma-editor-status {
+        min-inline-size: 0;
+        max-inline-size: 62%;
+        overflow: hidden;
+        color: var(--m3e-sys-color-on-surface-variant);
+        font-size: 11.5px;
+        line-height: 16px;
+        text-align: end;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .ma-editor-page [hidden] {
+        display: none !important;
+      }
+      html:has(> body.ma-modal-mode),
+      body.ma-modal-mode {
+        background: transparent !important;
+        overflow: hidden;
+      }
+      body.ma-modal-mode > :not(.ma-dialog-scope) {
+        visibility: hidden !important;
+      }
+      .ma-editor-page.ma-site-mode > .ma-editor-header .ma-toolbar {
+        display: none;
+      }
+      .ma-editor-page.ma-site-mode .ma-editor-site-toolbar {
+        flex-wrap: nowrap;
+        gap: 8px;
+        min-block-size: 34px;
+        padding: 3px 8px;
+      }
+      .ma-editor-page.ma-site-mode .ma-editor-standard-field > span:first-child {
+        display: none !important;
+      }
+      .ma-editor-page.ma-site-mode .ma-editor-standard-field select {
+        block-size: 28px;
+        min-inline-size: 90px;
+      }
+      .ma-editor-site-status {
+        flex: 1 1 auto;
+        min-inline-size: 0;
+        margin: 0;
+        overflow: hidden;
+        color: var(--m3e-sys-color-on-surface-variant);
+        font-size: 11.5px;
+        line-height: 16px;
+        text-align: end;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .ma-editor-site-status[data-kind="error"] {
+        color: var(--m3e-sys-color-error);
+      }
+      .ma-editor-draft {
+        position: absolute;
+        inset-block-start: calc(100% + 4px);
+        inset-inline-end: 8px;
+        z-index: 60;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px 8px;
+        align-items: center;
+        max-inline-size: min(420px, calc(100vw - 16px));
+        min-block-size: 0;
+        padding: 5px 8px;
+        border: 1px solid var(--m3e-sys-color-outline-variant);
+        border-radius: 8px;
+        background: var(--m3e-sys-color-surface-container-high);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+      }
+      .ma-editor-draft .ma-meta,
+      .ma-editor-draft .ma-status {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--m3e-sys-color-on-surface-variant);
+        font-size: 11px;
+        line-height: 16px;
+      }
+      .ma-editor-draft .ma-status[data-kind="error"] {
+        color: var(--m3e-sys-color-error);
+      }
+      .ma-editor-draft .m3e-button {
+        min-block-size: 24px;
+        padding: 0 8px;
+        font-size: 11px;
+      }
+      .ma-ui .ma-editor-site-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+        align-items: center;
+        padding: 0 12px 5px;
+      }
+      .ma-ui .ma-editor-site-toolbar .ma-status,
+      .ma-ui .ma-editor-site-toolbar .ma-meta {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--m3e-sys-color-on-surface-variant);
+        font-size: 11.5px;
+        line-height: 16px;
+      }
+      .ma-ui .ma-editor-standard-field {
+        display: inline-flex;
+        flex: 0 0 auto;
+        gap: 6px;
+        align-items: center;
+        color: var(--m3e-sys-color-on-surface-variant);
+        font-size: 11.5px;
+        line-height: 16px;
+        white-space: nowrap;
+      }
+      .ma-ui .ma-editor-standard-field select {
+        block-size: 26px;
+        min-inline-size: 96px;
+        padding: 0 22px 0 7px;
+        border: 1px solid var(--m3e-sys-color-outline-variant);
+        border-radius: 6px;
+        background: var(--m3e-sys-color-surface);
+        color: var(--m3e-sys-color-on-surface);
+        font: inherit;
+        font-size: 12px;
+        line-height: 24px;
+      }
+      .ma-ui .ma-editor-standard-field select:focus-visible {
+        outline: 2px solid var(--m3e-sys-color-primary);
+        outline-offset: 1px;
+      }
+      .ma-editor-host {
+        flex: 1 1 auto;
+        min-block-size: 0;
+      }
+    </style>
+  </head>
+  <body class="ma-editor-page">
+    <div class="ma-ui ma-editor-header">
+      <header class="ma-toolbar">
+        <h1 id="ma-editor-title">MonacoAnywhere<span id="ma-editor-version" class="ma-version"></span></h1>
+        <span class="ma-toolbar__spacer" aria-hidden="true"></span>
+        <p id="ma-editor-status" class="ma-status" role="status"></p>
+      </header>
+      <div id="ma-editor-site-toolbar" class="ma-editor-site-toolbar" hidden>
+        <label class="ma-editor-standard-field" for="ma-editor-standard">
+          <span data-i18n="editor.site.standardLabel"></span>
+          <select id="ma-editor-standard"></select>
+        </label>
+        <p
+          id="ma-editor-site-status"
+          class="ma-status ma-editor-site-status"
+          role="status"
+        ></p>
+      </div>
+      <div id="ma-editor-draft" class="ma-editor-draft" hidden>
+        <p id="ma-editor-draft-scope" class="ma-meta" hidden></p>
+        <span class="ma-toolbar__spacer" aria-hidden="true"></span>
+        <p id="ma-editor-draft-status" class="ma-status" role="status" hidden></p>
+        <button
+          id="ma-draft-check"
+          class="m3e-button m3e-button--text"
+          type="button"
+          hidden
+        ></button>
+      </div>
+    </div>
+    <div id="ma-editor" class="ma-editor-host" data-monaco-anywhere-editor></div>
+    <script type="module" src="editor-boot.js"></script>
+  </body>
+</html>

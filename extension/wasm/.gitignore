@@ -1,0 +1,9 @@
+lib/
+node_modules/
+assets/*
+!assets/.gitkeep
+!assets/README.md
+build/out/
+build/deps/
+build/work/
+*.tgz

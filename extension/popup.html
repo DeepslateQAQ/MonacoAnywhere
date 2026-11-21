@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="popup.pageTitle"></title>
+    <link rel="stylesheet" href="theme.css" />
+    <style>
+      .ma-ui.ma-popup-page {
+        inline-size: 380px;
+        min-block-size: 0;
+        padding: 14px;
+      }
+      .ma-ui [hidden] {
+        display: none !important;
+      }
+      .ma-ui .ma-popup {
+        display: grid;
+        gap: 12px;
+      }
+      .ma-ui .ma-popup__header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .ma-ui .ma-popup__header h1 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 28px;
+      }
+      .ma-ui .ma-popup__state {
+        flex: 0 0 auto;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: var(--m3e-sys-color-surface-container-highest);
+        color: var(--m3e-sys-color-on-surface-variant);
+        font-size: 11.5px;
+        font-weight: 600;
+        line-height: 18px;
+      }
+      .ma-ui .ma-popup__state[data-state="ready"] {
+        background: var(--m3e-sys-color-secondary-container);
+        color: var(--m3e-sys-color-on-secondary-container);
+      }
+      .ma-ui .ma-popup__state[data-state="warn"] {
+        background: var(--m3e-sys-color-tertiary-container);
+        color: var(--m3e-sys-color-on-tertiary-container);
+      }
+      .ma-ui .ma-popup__status {
+        gap: 8px;
+      }
+      .ma-ui .ma-popup__row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 14px;
+        font-size: 12.5px;
+        line-height: 18px;
+      }
+      .ma-ui .ma-popup__row > :first-child {
+        flex: 0 0 auto;
+        color: var(--m3e-sys-color-on-surface-variant);
+      }
+      .ma-ui .ma-popup__row > :last-child {
+        min-inline-size: 0;
+        overflow-wrap: anywhere;
+        text-align: end;
+      }
+      .ma-ui .ma-popup__oobe {
+        margin: 0;
+      }
+      .ma-ui .ma-popup__controls {
+        gap: 14px;
+      }
+      .ma-ui .ma-popup__control {
+        display: grid;
+        gap: 6px;
+      }
+      .ma-ui .ma-popup__control-label {
+        color: var(--m3e-sys-color-on-surface-variant);
+        font-size: 11.5px;
+        font-weight: 600;
+        line-height: 16px;
+        letter-spacing: 0.02em;
+      }
+      .ma-ui .ma-backend-group {
+        inline-size: 100%;
+      }
+      .ma-ui .ma-backend-group .m3e-button {
+        inline-size: 100%;
+      }
+      .ma-ui .ma-popup__select {
+        box-sizing: border-box;
+        inline-size: 100%;
+        block-size: 38px;
+        padding: 0 10px;
+        border: 1px solid var(--m3e-sys-color-outline);
+        border-radius: 8px;
+        background: var(--m3e-sys-color-surface);
+        color: var(--m3e-sys-color-on-surface);
+        font: inherit;
+        font-size: 13px;
+      }
+      .ma-ui .ma-popup__select:focus-visible {
+        outline: 2px solid var(--m3e-sys-color-primary);
+        outline-offset: 1px;
+      }
+      .ma-ui .ma-popup__enable {
+        align-self: flex-start;
+        min-block-size: 30px;
+        padding: 0 10px;
+      }
+      .ma-ui .ma-popup__actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .ma-ui .ma-popup__actions .m3e-button {
+        inline-size: 100%;
+      }
+      .ma-ui .ma-popup__setup {
+        grid-column: 1 / -1;
+      }
+      .ma-ui .ma-popup__footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--m3e-sys-color-on-surface-variant);
+        font-size: 10.5px;
+        line-height: 14px;
+      }
+      .ma-ui .ma-loading-slot {
+        display: flex;
+        justify-content: center;
+        padding: 8px;
+      }
+      .ma-ui .ma-loading-slot:empty {
+        display: none;
+      }
+    </style>
+  </head>
+  <body class="ma-ui ma-popup-page">
+    <main class="ma-popup">
+      <header class="ma-popup__header">
+        <div>
+          <h1 data-i18n="common.appName"></h1>
+          <p class="ma-eyebrow" id="ma-popup-build"></p>
+        </div>
+        <span id="ma-popup-state" class="ma-popup__state" role="status"></span>
+      </header>
+
+      <section
+        class="ma-card ma-popup__status"
+        data-i18n-aria-label="popup.statusAria"
+      >
+        <div class="ma-popup__row">
+          <span data-i18n="popup.site.label"></span>
+          <span id="ma-popup-site"></span>
+        </div>
+        <div class="ma-popup__row">
+          <span data-i18n="popup.services.label"></span>
+          <span id="ma-popup-services"></span>
+        </div>
+        <div class="ma-popup__row">
+          <span data-i18n="popup.backend.label"></span>
+          <span id="ma-popup-backend"></span>
+        </div>
+        <p id="ma-popup-oobe" class="ma-note ma-popup__oobe"></p>
+        <button
+          id="ma-enable-site"
+          class="m3e-button m3e-button--outlined m3e-button--size-s ma-popup__enable"
+          type="button"
+          hidden
+        ></button>
+      </section>
+
+      <div id="ma-popup-loading" class="ma-loading-slot"></div>
+
+      <section class="ma-card ma-popup__controls">
+        <div class="ma-popup__control">
+          <span
+            id="ma-backend-label"
+            class="ma-popup__control-label"
+            data-i18n="popup.backend.choose"
+          ></span>
+          <div
+            id="ma-backend-segmented"
+            class="m3e-button-group m3e-button-group--connected m3e-button-group--size-m ma-backend-group"
+            role="radiogroup"
+            aria-labelledby="ma-backend-label"
+          >
+            <button
+              class="m3e-button m3e-button--tonal m3e-button--size-m m3e-button-group__item"
+              type="button"
+              role="radio"
+              aria-checked="false"
+              data-backend="wasm"
+            >
+              WASM
+            </button>
+            <button
+              class="m3e-button m3e-button--tonal m3e-button--size-m m3e-button-group__item"
+              type="button"
+              role="radio"
+              aria-checked="false"
+              data-backend="native"
+            >
+              <span data-i18n="popup.backend.nativeShort"></span>
+            </button>
+            <button
+              class="m3e-button m3e-button--tonal m3e-button--size-m m3e-button-group__item"
+              type="button"
+              role="radio"
+              aria-checked="false"
+              data-backend="site"
+              hidden
+            >
+              <span data-i18n="popup.backend.siteShort"></span>
+            </button>
+          </div>
+        </div>
+        <label class="ma-popup__control" for="ma-popup-theme">
+          <span
+            class="ma-popup__control-label"
+            data-i18n="popup.theme.label"
+          ></span>
+          <select id="ma-popup-theme" class="ma-popup__select"></select>
+        </label>
+      </section>
+
+      <div class="ma-popup__actions">
+        <button
+          id="ma-open-fixture"
+          class="m3e-button m3e-button--size-m"
+          type="button"
+          data-i18n="popup.openFixture"
+        ></button>
+        <button
+          id="ma-open-options"
+          class="m3e-button m3e-button--outlined m3e-button--size-m"
+          type="button"
+          data-i18n="popup.openOptions"
+        ></button>
+        <button
+          id="ma-open-setup"
+          class="m3e-button m3e-button--text m3e-button--size-m ma-popup__setup"
+          type="button"
+          data-i18n="popup.continueSetup"
+          hidden
+        ></button>
+      </div>
+
+      <footer class="ma-popup__footer">
+        <span id="ma-popup-registrations"></span>
+        <code id="ma-popup-id"></code>
+      </footer>
+
+      <div id="ma-popup-error" class="ma-status" role="status" hidden></div>
+    </main>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

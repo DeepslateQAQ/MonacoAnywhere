@@ -1,0 +1,43 @@
+{
+  "schema": "monacoanywhere.luogu-language/1",
+  "capturedAt": "2026-11-21",
+  "status": "partial",
+  "selectors": {
+    "editor": ".cm-content",
+    "root": ".combo-wrapper.lang-select",
+    "trigger": ".text",
+    "dropdown": ".dropdown",
+    "dropdownHost": ".lfe-body",
+    "option": "li",
+    "accountContext": "#lentille-context"
+  },
+  "scopes": [
+    {
+      "page": "submit",
+      "selector": "#submit",
+      "verified": true,
+      "note": "Observed on /problem/P1001#submit. The combo is the only visible .combo-wrapper.lang-select."
+    },
+    {
+      "page": "ide",
+      "selector": "#ide",
+      "verified": false,
+      "note": "The #ide tab was not captured in the read-only reconnaissance. The same selectors are used only when exactly one visible combo resolves; otherwise language sync degrades to unsupported/read-only with an explicit reason."
+    }
+  ],
+  "knownCppLabels": [
+    "C++14 (GCC 9)",
+    "C++98",
+    "C++11",
+    "C++14",
+    "C++17",
+    "C++20",
+    "C++23"
+  ],
+  "notes": [
+    "The language widget is not a native select. Clicking .text opens a document-level .dropdown (inside .lfe-body) whose li labels are authoritative.",
+    "Option identity is the exact normalized li text. Numeric Luogu language ids are deliberately ignored.",
+    "C++14 and C++14 (GCC 9) both map to the c++14 standard, so a standard-level choice must ask the user which option to use.",
+    "If more than one visible combo resolves, the adapter returns an unsupported reason instead of guessing."
+  ]
+}

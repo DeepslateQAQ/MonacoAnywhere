@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN" data-app="Hydro" data-page="problem_detail">
+  <head>
+    <meta charset="utf-8">
+    <title>P2314 - Hydro</title>
+  </head>
+  <body>
+    <script id="ma-test-state" type="application/json">{
+      "LANGS": {
+        "c": "C",
+        "cc": "C++",
+        "cc.cc14o2": {"display": "C++14(O2)", "monaco": "cpp"},
+        "cc.ccnoio2": {"display": "C++14(O2, GCC 9.3.0)", "monaco": "cpp"},
+        "cc.noi": {"display": "C++14(GCC 9.3.0)", "monaco": "cpp"},
+        "cc.noio2": {"display": "C++14(O2, GCC 9.3.0)", "monaco": "cpp"},
+        "cc.cc17o2": {"display": "C++17(O2)", "monaco": "cpp"},
+        "cc.cc26o2": {"display": "C++26(O2)", "monaco": "cpp"},
+        "py.py3": {"display": "Python 3", "monaco": "python"}
+      },
+      "UiContext": {
+        "postSubmitUrl": "/d/SZXQ/p/2314/submit",
+        "user": {"_id": 77, "uname": "hydro-user"},
+        "lspHost": "wss://hydro.ac"
+      },
+      "externalModules": ["monaco-cpp@lsp", "monaco-java@lsp"]
+    }</script>
+
+    <div id="monaco-variant">
+      <div class="ScratchpadMonacoEditor"></div>
+      <select class="select">
+        <option value="cc.cc14o2">C++14(O2)</option>
+        <option value="cc.ccnoio2" selected>C++14(O2, GCC 9.3.0)</option>
+        <option value="cc.noi">C++14(GCC 9.3.0)</option>
+        <option value="cc.noio2">C++14(O2, GCC 9.3.0)</option>
+      </select>
+    </div>
+
+    <div id="submit-variant" style="display:none">
+      <textarea name="code" class="textbox monospace">int main() { return 0; }</textarea>
+      <select name="lang">
+        <option value="cc.cc14o2" selected>C++14(O2)</option>
+        <option value="cc.ccnoio2">C++14(O2, GCC 9.3.0)</option>
+        <option value="cc.noi">C++14(GCC 9.3.0)</option>
+        <option value="cc.noio2">C++14(O2, GCC 9.3.0)</option>
+        <option value="cc.cc17o2">C++17(O2)</option>
+        <option value="cc.cc26o2">C++26(O2)</option>
+        <option value="py.py3">Python 3</option>
+      </select>
+    </div>
+
+    <form action="/d/SZXQ/p/2314/submit" method="post">
+      <button type="submit">Submit</button>
+    </form>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+.direnv/
+.build/
+.omp/
+node_modules/
+dist/
+host/dist/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.env
+*.pem
+extension/wasm/build/deps/
+extension/wasm/build/work/

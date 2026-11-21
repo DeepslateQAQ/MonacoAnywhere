@@ -1,0 +1,7 @@
+packages: []
+
+# pnpm 12 replaces onlyBuiltDependencies with allowBuilds. esbuild ships its
+# platform binary through a postinstall script; no other dependency is allowed
+# to run lifecycle scripts.
+allowBuilds:
+  'esbuild@0.28.2': true
