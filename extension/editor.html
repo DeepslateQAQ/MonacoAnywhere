@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MonacoAnywhere editor</title>
+    <link rel="stylesheet" href="editor.css" />
+    <style>
+      :root { color-scheme: dark light; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        background: #1e1e1e;
+        color: #e6e0e9;
+        font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      @media (prefers-color-scheme: light) {
+        body { background: #ffffff; color: #1d1b20; }
+        .ma-ui { border-color: #d8d2dc; }
+      }
+      .ma-ui {
+        box-sizing: border-box;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 4px 16px;
+        padding: 8px 14px;
+        border-bottom: 1px solid #3c3c40;
+      }
+      .ma-ui h1 { margin: 0; font-size: 13px; font-weight: 650; letter-spacing: 0.01em; }
+      .ma-status { margin: 0; color: #b9b2be; max-width: 110ch; }
+      #ma-editor {
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+      @media (prefers-color-scheme: light) {
+        .ma-status { color: #625b71; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="ma-ui">
+      <h1 id="ma-editor-title">MonacoAnywhere editor fixture</h1>
+      <p id="ma-editor-status" class="ma-status" role="status">
+        Language services are unavailable in this build.
+      </p>
+    </header>
+    <div id="ma-editor" data-monaco-anywhere-editor></div>
+    <script type="module" src="editor.js"></script>
+  </body>
+</html>

@@ -1,0 +1,37 @@
+{
+  "name": "monaco-anywhere",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Monaco editor and real C++ language services for online judge editors (Chromium MV3 extension).",
+  "license": "AGPL-3.0-only",
+  "packageManager": "pnpm@12.9.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "build:bootstrap": "node esbuild.config.mjs --bootstrap",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@kyralabs/m3e-css": "1.8.0",
+    "@kyralabs/m3e-elements": "1.8.0",
+    "@kyralabs/m3e-tokens": "1.8.0",
+    "monaco-editor": "0.57.0",
+    "monaco-languageserver-types": "0.4.1",
+    "vscode-jsonrpc": "9.0.3",
+    "vscode-languageserver-protocol": "3.18.4",
+    "vscode-ws-jsonrpc": "4.0.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "@types/chrome": "0.3.7",
+    "@types/node": "24.19.2",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2",
+    "vitest": "5.1.1"
+  }
+}

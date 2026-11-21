@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MonacoAnywhere options</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --ma-bg: #fdf7ff;
+        --ma-surface: #ffffff;
+        --ma-text: #1d1b20;
+        --ma-muted: #625b71;
+        --ma-primary: #6750a4;
+        --ma-primary-text: #ffffff;
+        --ma-outline: #cac4d0;
+        --ma-error: #b3261e;
+        --ma-radius: 20px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --ma-bg: #141218;
+          --ma-surface: #211f26;
+          --ma-text: #e6e0e9;
+          --ma-muted: #cac4d0;
+          --ma-primary: #d0bcff;
+          --ma-primary-text: #201a2b;
+          --ma-outline: #49454f;
+          --ma-error: #f2b8b5;
+        }
+      }
+      body { margin: 0; }
+      .ma-ui {
+        min-height: 100vh;
+        box-sizing: border-box;
+        padding: 32px 20px 48px;
+        background: var(--ma-bg);
+        color: var(--ma-text);
+        font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      .ma-shell { max-width: 820px; margin: 0 auto; }
+      .ma-eyebrow {
+        margin: 0 0 6px;
+        color: var(--ma-muted);
+        font-size: 13px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      h1 { margin: 0 0 10px; font-size: clamp(28px, 4vw, 38px); line-height: 1.15; }
+      h2 { margin: 0 0 14px; font-size: 21px; }
+      p { margin: 0 0 12px; }
+      .ma-intro { max-width: 62ch; color: var(--ma-muted); }
+      .ma-card {
+        margin-top: 22px;
+        padding: 24px;
+        border: 1px solid var(--ma-outline);
+        border-radius: var(--ma-radius);
+        background: var(--ma-surface);
+      }
+      .ma-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 18px;
+      }
+      .ma-field { display: grid; gap: 6px; align-content: start; }
+      .ma-field span { font-weight: 600; }
+      .ma-field small { color: var(--ma-muted); }
+      input, select, textarea {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 42px;
+        padding: 8px 10px;
+        border: 1px solid var(--ma-outline);
+        border-radius: 10px;
+        background: color-mix(in srgb, var(--ma-surface) 80%, var(--ma-bg));
+        color: inherit;
+        font: inherit;
+      }
+      textarea { min-height: 88px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+      input:focus-visible, select:focus-visible, textarea:focus-visible {
+        outline: 3px solid var(--ma-primary);
+        outline-offset: 2px;
+      }
+      fieldset { margin: 24px 0 0; padding: 0; border: 0; }
+      legend { margin-bottom: 12px; font-weight: 650; }
+      .ma-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+      button {
+        min-height: 42px;
+        padding: 0 18px;
+        border: 1px solid var(--ma-outline);
+        border-radius: 999px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
+      button.primary {
+        border-color: transparent;
+        background: var(--ma-primary);
+        color: var(--ma-primary-text);
+        font-weight: 650;
+      }
+      button:focus-visible { outline: 3px solid var(--ma-primary); outline-offset: 2px; }
+      code {
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: color-mix(in srgb, var(--ma-text) 8%, transparent);
+        font-family: ui-monospace, Consolas, monospace;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+      .ma-error { margin-top: 14px; color: var(--ma-error); font-weight: 600; }
+      .ma-status { margin-top: 14px; color: var(--ma-muted); }
+      .ma-note {
+        margin-top: 20px;
+        padding: 14px 16px;
+        border-left: 3px solid var(--ma-primary);
+        color: var(--ma-muted);
+        font-size: 14px;
+      }
+      .ma-meta { margin: 8px 0 0; overflow-wrap: anywhere; }
+      @media (max-width: 520px) {
+        .ma-ui { padding: 22px 14px 36px; }
+        .ma-card { padding: 18px; }
+      }
+    </style>
+  </head>
+  <body class="ma-ui">
+    <main class="ma-shell" aria-labelledby="ma-title">
+      <header>
+        <p class="ma-eyebrow">MonacoAnywhere · <span id="ma-build-mode">bootstrap</span></p>
+        <h1 id="ma-title">Options</h1>
+        <p class="ma-intro">
+          Preferences are stored locally. This bootstrap build has no clangd
+          engine, no native host integration, and no fixture validation, so it
+          does not claim that any backend works.
+        </p>
+      </header>
+
+      <section class="ma-card">
+        <h2>Language services and editor</h2>
+        <form id="ma-options-form">
+          <div class="ma-grid">
+            <label class="ma-field">
+              <span>Backend preference</span>
+              <select id="ma-backend">
+                <option value="">No backend selected</option>
+                <option value="wasm">WASM clangd</option>
+                <option value="native">Local clangd</option>
+              </select>
+              <small>Not preselected by default. Changing this does not validate it.</small>
+            </label>
+
+            <label class="ma-field">
+              <span>Theme</span>
+              <select id="ma-theme">
+                <option value="system">Follow system</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </label>
+
+            <label class="ma-field">
+              <span>Interface language</span>
+              <select id="ma-locale">
+                <option value="auto">Follow browser</option>
+                <option value="zh-CN">简体中文</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+
+            <label class="ma-field">
+              <span>Hidden-tab pause (ms)</span>
+              <input id="ma-hidden-pause" type="number" min="1000" max="86400000" step="1000" inputmode="numeric" />
+              <small>Applied to WASM sessions after integration.</small>
+            </label>
+
+            <label class="ma-field">
+              <span>clangd path</span>
+              <input id="ma-clangd-path" type="text" autocomplete="off" spellcheck="false" placeholder="/usr/bin/clangd" />
+              <small>Used by the native host once it exists; not checked here.</small>
+            </label>
+
+            <label class="ma-field">
+              <span>Editor font family</span>
+              <input id="ma-editor-font" type="text" autocomplete="off" spellcheck="false" />
+            </label>
+
+            <label class="ma-field">
+              <span>Editor theme</span>
+              <input id="ma-editor-theme" type="text" autocomplete="off" spellcheck="false" />
+            </label>
+          </div>
+
+          <fieldset>
+            <legend>Advanced</legend>
+            <div class="ma-grid">
+              <label class="ma-field">
+                <span>query-driver allowlist</span>
+                <textarea id="ma-query-driver" spellcheck="false" placeholder="One glob per line or comma separated"></textarea>
+                <small>Native-host configuration only. Not applied by this build.</small>
+              </label>
+
+              <label class="ma-field">
+                <span>Extra include directories</span>
+                <textarea id="ma-extra-includes" spellcheck="false" placeholder="One path per line or comma separated"></textarea>
+                <small>Added as separate compiler arguments after integration.</small>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="ma-actions">
+            <button class="primary" type="submit">Save preferences</button>
+            <button id="ma-open-setup" type="button">Open setup wizard</button>
+          </div>
+        </form>
+
+        <div id="ma-options-status" class="ma-status" role="status" hidden></div>
+        <div id="ma-options-error" class="ma-error" role="alert" hidden></div>
+      </section>
+
+      <section class="ma-card" aria-labelledby="ma-state-title">
+        <h2 id="ma-state-title">Current state</h2>
+        <p id="ma-oobe-state"></p>
+        <p class="ma-note">
+          <code>onboardingComplete</code> is never set by this build. The WASM
+          engine, data packs, native host, site adapters, and LSP sessions
+          remain future work.
+        </p>
+        <p class="ma-meta">
+          Extension ID: <code id="ma-extension-id"></code>
+        </p>
+      </section>
+    </main>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>
