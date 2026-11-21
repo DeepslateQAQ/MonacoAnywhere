@@ -39,6 +39,8 @@ import {
   standardLabel,
   type Standard
 } from "../profiles/types.js";
+import themeCss from "../ui/theme.css?inline";
+import { applyEditorThemeAccent } from "../ui/editor-accent.js";
 
 const PICKER_HOST_ID = "monacoanywhere-generic-picker";
 const MAX_SELECTOR_LENGTH = 512;
@@ -123,46 +125,38 @@ export interface GenericPickerStrings {
 
 export const PICKER_STRINGS_EN: GenericPickerStrings = {
   title: "MonacoAnywhere editor picker",
-  selectEditor:
-    "Move the pointer over the code editor and click it. Esc cancels.",
-  selectLanguage:
-    "Now click the site's C++ language control, or skip this step.",
+  selectEditor: "Click the code editor on the page. Press Esc to cancel.",
+  selectLanguage: "Now click the C++ language selector, or skip this step.",
   mapLanguages: "Map language options",
   cancel: "Cancel",
-  skipLanguage: "No language control",
-  confirm: "Save selection",
-  notRecognized: "Not recognized",
-  noOptions:
-    "No options were visible for this control. The rule will be saved without a language mapping.",
-  shadowWarning:
-    "The selected element is inside a shadow root; a normal document selector may not find it later.",
-  nonUniqueWarning:
-    "This selector matches more than one element here. The rule will fall back to the original editor when that happens.",
-  error: "The selection could not be validated.",
-  mappingDescription:
-    "Choose the C++ standard each site option provides. Unmapped options are left untouched.",
+  skipLanguage: "No language selector",
+  confirm: "Save rule",
+  notRecognized: "Ignore",
+  noOptions: "No options found in this selector. The rule will be saved without language mapping.",
+  shadowWarning: "This element is inside a shadow root, so a standard selector may not match it later.",
+  nonUniqueWarning: "This selector matches multiple elements on the page. MonacoAnywhere will fall back to the site editor if it isn't unique.",
+  error: "Couldn't validate this selection.",
+  mappingDescription: "Match each site option to its C++ standard. Unmapped options are ignored.",
   pathPatternLabel: "Path pattern",
-  selectedEditor: "Selected editor"
+  selectedEditor: "Selected editor",
 };
 
 export const PICKER_STRINGS_ZH: GenericPickerStrings = {
   title: "MonacoAnywhere 编辑器拾取",
-  selectEditor: "把指针移到代码编辑器上并点击。按 Esc 取消。",
-  selectLanguage: "现在点击站点的 C++ 语言控件，或跳过此步骤。",
+  selectEditor: "在页面上点击代码编辑器。按 Esc 取消。",
+  selectLanguage: "请点击站点的 C++ 语言选择器，或跳过此步。",
   mapLanguages: "映射语言选项",
   cancel: "取消",
-  skipLanguage: "没有语言控件",
-  confirm: "保存选择",
-  notRecognized: "不识别",
-  noOptions: "该控件当前没有可见选项。规则将不带语言映射保存。",
-  shadowWarning: "所选元素位于 shadow root 内；之后按文档选择器可能找不到它。",
-  nonUniqueWarning:
-    "该选择器在当前页面命中多个元素；届时规则会回退到原编辑器。",
-  error: "无法验证该选择。",
-  mappingDescription:
-    "为每个站点选项选择对应的 C++ 标准；未映射的选项不会被修改。",
+  skipLanguage: "没有语言选择器",
+  confirm: "保存规则",
+  notRecognized: "忽略",
+  noOptions: "未在此控件中找到选项，规则将在不带语言映射的情况下保存。",
+  shadowWarning: "该元素位于 shadow root 内，常规选择器可能无法再次定位它。",
+  nonUniqueWarning: "该选择器在当前页面匹配到多个元素，无法唯一命中时会回退到站点原编辑器。",
+  error: "无法验证所选元素。",
+  mappingDescription: "为每个站点选项指定对应的 C++ 标准，未映射的选项会被忽略。",
   pathPatternLabel: "路径模式",
-  selectedEditor: "已选编辑器"
+  selectedEditor: "已选编辑器",
 };
 
 export function defaultPickerStrings(locale?: string): GenericPickerStrings {
@@ -189,6 +183,8 @@ export interface GenericPickerOptions {
   readonly document?: Document;
   readonly locale?: string;
   readonly strings?: Partial<GenericPickerStrings>;
+  readonly theme?: "system" | "light" | "dark";
+  readonly editorTheme?: string;
 }
 
 export interface GenericPickerController {
@@ -423,38 +419,25 @@ export function suggestSafeSelector(element: Element): SelectorSuggestion {
 /* Picker overlay                                                             */
 /* ------------------------------------------------------------------------- */
 
-const PICKER_CSS = `
-:host { color-scheme: light dark; }
-*, *::before, *::after { box-sizing: border-box; }
+const PICKER_LAYOUT_CSS = `
 .layer {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
-  color: #17121f;
 }
-[hidden] { display: none !important; }
 .highlight {
   position: fixed;
   z-index: 2147483000;
-  border: 2px solid #6f5cff;
-  border-radius: 5px;
-  background: rgba(111, 92, 255, 0.14);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
+  outline: 2px solid var(--m3e-sys-color-primary);
   pointer-events: none;
 }
 .badge {
   position: fixed;
   z-index: 2147483001;
-  max-width: min(520px, calc(100vw - 16px));
-  padding: 5px 9px;
+  max-inline-size: min(520px, calc(100vw - 16px));
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  border-radius: 6px;
-  background: #17121f;
-  color: #ffffff;
-  font-size: 12px;
   pointer-events: none;
 }
 .bar {
@@ -463,20 +446,18 @@ const PICKER_CSS = `
   top: 12px;
   left: 50%;
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
   gap: 8px 12px;
   align-items: center;
+  width: max-content;
   max-width: calc(100vw - 24px);
-  padding: 8px 10px 8px 14px;
-  border: 1px solid #d8d2e8;
-  border-radius: 999px;
-  background: #ffffff;
-  box-shadow: 0 8px 28px rgba(26, 20, 45, 0.18);
+  padding: 12px 16px;
   pointer-events: auto;
   transform: translateX(-50%);
 }
-.title { font-weight: 650; white-space: nowrap; }
-.hint { max-width: 48vw; color: #50475e; }
+.title { white-space: nowrap; }
+.hint { max-width: 48vw; }
 .panel {
   position: fixed;
   z-index: 2147483002;
@@ -486,66 +467,15 @@ const PICKER_CSS = `
   max-height: 64vh;
   overflow: auto;
   padding: 16px;
-  border: 1px solid #d8d2e8;
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 12px 36px rgba(26, 20, 45, 0.22);
+  gap: 12px;
   pointer-events: auto;
   transform: translateX(-50%);
 }
-.panel-title { margin: 0 0 6px; font-size: 15px; font-weight: 700; }
-.panel-text { margin: 0 0 12px; color: #50475e; }
-.warning { margin: 0 0 10px; color: #8a4b00; }
-.rows { display: grid; gap: 10px; }
-.row {
-  display: grid;
-  gap: 6px;
-  padding: 10px;
-  border: 1px solid #ece8f4;
-  border-radius: 8px;
-}
-.option-label { display: grid; gap: 3px; font-weight: 600; }
-.option-id {
-  overflow-wrap: anywhere;
-  color: #6b627b;
-  font: 11px/1.3 ui-monospace, SFMono-Regular, Consolas, monospace;
-}
-.option-disabled { color: #8a4b00; font-weight: 500; }
-.standard-select {
-  width: 100%;
-  min-height: 32px;
-  padding: 4px 6px;
-  border: 1px solid #cfc7df;
-  border-radius: 6px;
-  background: #ffffff;
-  color: inherit;
-  font: inherit;
-}
-.actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
-.button {
-  min-height: 32px;
-  padding: 5px 12px;
-  border: 1px solid #cfc7df;
-  border-radius: 999px;
-  background: #ffffff;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-.button.primary { border-color: #4e3cc7; background: #4e3cc7; color: #ffffff; }
-.error { margin: 10px 0 0; color: #a31919; }
-@media (prefers-color-scheme: dark) {
-  .layer { color: #f1edf8; }
-  .bar, .panel { border-color: #443b58; background: #211c2c; }
-  .hint, .panel-text { color: #c8c0d8; }
-  .row { border-color: #3a324b; }
-  .option-id { color: #b7adc9; }
-  .standard-select, .button { border-color: #554a6b; background: #2b2439; color: #f1edf8; }
-  .button.primary { border-color: #8a78ff; background: #6f5cff; }
-  .highlight { background: rgba(138, 120, 255, 0.18); }
-  .warning { color: #ffbd66; }
-  .error { color: #ff8d8d; }
-}
+.rows { display: grid; gap: 16px; }
+.option-field { min-inline-size: 0; }
+.option-id { overflow-wrap: anywhere; }
+.standard-select { appearance: auto; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 `;
 
 interface PickedEditor {
@@ -583,7 +513,12 @@ function makeButton(
   text: string,
   primary = false
 ): HTMLButtonElement {
-  const button = makeElement(doc, "button", primary ? "button primary" : "button", text);
+  const button = makeElement(
+    doc,
+    "button",
+    `m3e-button m3e-button--size-s${primary ? "" : " m3e-button--text"}`,
+    text
+  );
   button.type = "button";
   return button;
 }
@@ -628,7 +563,9 @@ export function openGenericPicker(
   host.style.setProperty("inset", "0");
   host.style.zIndex = "2147483647";
   host.style.pointerEvents = "none";
-  host.style.setProperty("color-scheme", "light dark");
+  host.style.setProperty("color-scheme", options.theme === "system" || !options.theme
+    ? "light dark"
+    : options.theme);
 
   let shadow: ShadowRoot;
   try {
@@ -646,15 +583,22 @@ export function openGenericPicker(
   }
 
   const style = pageDocument.createElement("style");
-  style.textContent = PICKER_CSS;
-  const layer = makeElement(pageDocument, "div", "layer");
+  style.textContent = `${themeCss}\n${PICKER_LAYOUT_CSS}`;
+  const layer = makeElement(pageDocument, "div", "ma-ui layer");
+  if (options.theme && options.theme !== "system") {
+    layer.dataset.theme = options.theme;
+  }
   const highlight = makeElement(pageDocument, "div", "highlight");
   highlight.hidden = true;
-  const badge = makeElement(pageDocument, "div", "badge");
+  const badge = makeElement(pageDocument, "div", "m3e-tooltip badge");
   badge.hidden = true;
 
-  const bar = makeElement(pageDocument, "div", "bar");
-  const title = makeElement(pageDocument, "div", "title", strings.title);
+  const bar = makeElement(
+    pageDocument,
+    "div",
+    "m3e-card m3e-card--elevated bar"
+  );
+  const title = makeElement(pageDocument, "h3", "title", strings.title);
   const hint = makeElement(pageDocument, "div", "hint", strings.selectEditor);
   hint.setAttribute("aria-live", "polite");
   const skipButton = makeButton(pageDocument, strings.skipLanguage);
@@ -662,7 +606,11 @@ export function openGenericPicker(
   const cancelButton = makeButton(pageDocument, strings.cancel);
   bar.append(title, hint, skipButton, cancelButton);
 
-  const panel = makeElement(pageDocument, "div", "panel");
+  const panel = makeElement(
+    pageDocument,
+    "div",
+    "m3e-card m3e-card--elevated panel"
+  );
   panel.hidden = true;
   panel.setAttribute("role", "dialog");
   panel.setAttribute("aria-label", strings.title);
@@ -670,6 +618,7 @@ export function openGenericPicker(
   layer.append(highlight, badge, bar, panel);
   shadow.append(style, layer);
   pageDocument.documentElement.append(host);
+  applyEditorThemeAccent(layer, options.editorTheme ?? null);
 
   let step: "editor" | "language" | "mapping" = "editor";
   let hovered: Element | null = null;
@@ -777,8 +726,13 @@ export function openGenericPicker(
   };
 
   const appendWarnings = (parent: HTMLElement): void => {
+    const warnings = makeElement(pageDocument, "div", "warnings");
+    warnings.setAttribute("role", "status");
+    warnings.setAttribute("aria-live", "polite");
+    warnings.setAttribute("aria-atomic", "true");
+    parent.append(warnings);
     for (const warning of warningsFor()) {
-      parent.append(makeElement(pageDocument, "p", "warning", warning));
+      warnings.append(makeElement(pageDocument, "p", undefined, warning));
     }
   };
 
@@ -825,6 +779,7 @@ export function openGenericPicker(
     if (!node) {
       node = makeElement(pageDocument, "p", "error");
       node.setAttribute("role", "alert");
+      node.setAttribute("aria-atomic", "true");
       parent.append(node);
     }
     node.textContent =
@@ -843,7 +798,7 @@ export function openGenericPicker(
     panel.replaceChildren();
     panel.hidden = false;
     panel.append(
-      makeElement(pageDocument, "div", "panel-title", strings.mapLanguages),
+      makeElement(pageDocument, "h3", undefined, strings.mapLanguages),
       makeElement(pageDocument, "p", "panel-text", strings.mappingDescription),
       makeElement(
         pageDocument,
@@ -857,24 +812,27 @@ export function openGenericPicker(
     const selects = new Map<string, HTMLSelectElement>();
     const rows = makeElement(pageDocument, "div", "rows");
     for (const option of language.options) {
-      const row = makeElement(pageDocument, "div", "row");
-      const label = makeElement(pageDocument, "label", "option-label");
-      label.append(
-        makeElement(
-          pageDocument,
-          "span",
-          undefined,
-          option.label || option.id
-        ),
-        makeElement(pageDocument, "code", "option-id", option.id)
+      const label = makeElement(
+        pageDocument,
+        "label",
+        "m3e-text-field m3e-text-field--outlined m3e-text-field--label-above option-field"
       );
-      if (option.disabled) {
-        label.append(
-          makeElement(pageDocument, "span", "option-disabled", "disabled")
-        );
-      }
-
-      const select = makeElement(pageDocument, "select", "standard-select");
+      const labelText = makeElement(
+        pageDocument,
+        "span",
+        "m3e-text-field__label",
+        option.label || option.id
+      );
+      const container = makeElement(
+        pageDocument,
+        "span",
+        "m3e-text-field__container"
+      );
+      const select = makeElement(
+        pageDocument,
+        "select",
+        "m3e-text-field__input standard-select"
+      );
       for (const choice of STANDARD_MAPPING_CHOICES) {
         const element = makeElement(
           pageDocument,
@@ -891,10 +849,30 @@ export function openGenericPicker(
         "aria-label",
         `${option.label || option.id}: ${strings.mapLanguages}`
       );
-      label.append(select);
+      container.append(
+        select,
+        makeElement(pageDocument, "span", "m3e-text-field__outline")
+      );
+      const supporting = makeElement(
+        pageDocument,
+        "span",
+        "m3e-text-field__supporting"
+      );
+      const supportingText = makeElement(
+        pageDocument,
+        "span",
+        "m3e-text-field__supporting-text"
+      );
+      supportingText.append(
+        makeElement(pageDocument, "code", "option-id", option.id)
+      );
+      if (option.disabled) {
+        supportingText.append(" · disabled");
+      }
+      supporting.append(supportingText);
+      label.append(labelText, container, supporting);
       selects.set(option.id, select);
-      row.append(label);
-      rows.append(row);
+      rows.append(label);
     }
 
     if (language.options.length === 0) {

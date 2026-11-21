@@ -96,13 +96,6 @@
         min-block-size: 34px;
         padding: 3px 8px;
       }
-      .ma-editor-page.ma-site-mode .ma-editor-standard-field > span:first-child {
-        display: none !important;
-      }
-      .ma-editor-page.ma-site-mode .ma-editor-standard-field select {
-        block-size: 28px;
-        min-inline-size: 90px;
-      }
       .ma-editor-site-status {
         flex: 1 1 auto;
         min-inline-size: 0;
@@ -117,41 +110,6 @@
       }
       .ma-editor-site-status[data-kind="error"] {
         color: var(--m3e-sys-color-error);
-      }
-      .ma-editor-draft {
-        position: absolute;
-        inset-block-start: calc(100% + 4px);
-        inset-inline-end: 8px;
-        z-index: 60;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 2px 8px;
-        align-items: center;
-        max-inline-size: min(420px, calc(100vw - 16px));
-        min-block-size: 0;
-        padding: 5px 8px;
-        border: 1px solid var(--m3e-sys-color-outline-variant);
-        border-radius: 8px;
-        background: var(--m3e-sys-color-surface-container-high);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
-      }
-      .ma-editor-draft .ma-meta,
-      .ma-editor-draft .ma-status {
-        margin: 0;
-        padding: 0;
-        border: 0;
-        background: none;
-        color: var(--m3e-sys-color-on-surface-variant);
-        font-size: 11px;
-        line-height: 16px;
-      }
-      .ma-editor-draft .ma-status[data-kind="error"] {
-        color: var(--m3e-sys-color-error);
-      }
-      .ma-editor-draft .m3e-button {
-        min-block-size: 24px;
-        padding: 0 8px;
-        font-size: 11px;
       }
       .ma-ui .ma-editor-site-toolbar {
         display: flex;
@@ -171,30 +129,18 @@
         line-height: 16px;
       }
       .ma-ui .ma-editor-standard-field {
-        display: inline-flex;
+        --m3e-comp-text-field-min-height: 28px;
+        --m3e-comp-text-field-outlined-min-height: 28px;
+        --m3e-comp-text-field-min-width: 96px;
+        --m3e-comp-text-field-outlined-min-width: 96px;
+        --m3e-comp-text-field-padding: 4px;
+        --m3e-comp-text-field-min-text-line-height: 20px;
+        --m3e-comp-outlined-text-field-input-size: 12px;
+        --m3e-comp-outlined-text-field-input-line-height: 20px;
         flex: 0 0 auto;
-        gap: 6px;
-        align-items: center;
-        color: var(--m3e-sys-color-on-surface-variant);
-        font-size: 11.5px;
-        line-height: 16px;
-        white-space: nowrap;
       }
       .ma-ui .ma-editor-standard-field select {
-        block-size: 26px;
-        min-inline-size: 96px;
-        padding: 0 22px 0 7px;
-        border: 1px solid var(--m3e-sys-color-outline-variant);
-        border-radius: 6px;
-        background: var(--m3e-sys-color-surface);
-        color: var(--m3e-sys-color-on-surface);
-        font: inherit;
-        font-size: 12px;
-        line-height: 24px;
-      }
-      .ma-ui .ma-editor-standard-field select:focus-visible {
-        outline: 2px solid var(--m3e-sys-color-primary);
-        outline-offset: 1px;
+        appearance: auto;
       }
       .ma-editor-host {
         flex: 1 1 auto;
@@ -210,26 +156,20 @@
         <p id="ma-editor-status" class="ma-status" role="status"></p>
       </header>
       <div id="ma-editor-site-toolbar" class="ma-editor-site-toolbar" hidden>
-        <label class="ma-editor-standard-field" for="ma-editor-standard">
-          <span data-i18n="editor.site.standardLabel"></span>
-          <select id="ma-editor-standard"></select>
+        <label
+          class="ma-editor-standard-field m3e-text-field m3e-text-field--outlined"
+          for="ma-editor-standard"
+        >
+          <span class="m3e-text-field__container">
+            <select id="ma-editor-standard" class="m3e-text-field__input"></select>
+            <span class="m3e-text-field__outline"></span>
+          </span>
         </label>
         <p
           id="ma-editor-site-status"
           class="ma-status ma-editor-site-status"
           role="status"
         ></p>
-      </div>
-      <div id="ma-editor-draft" class="ma-editor-draft" hidden>
-        <p id="ma-editor-draft-scope" class="ma-meta" hidden></p>
-        <span class="ma-toolbar__spacer" aria-hidden="true"></span>
-        <p id="ma-editor-draft-status" class="ma-status" role="status" hidden></p>
-        <button
-          id="ma-draft-check"
-          class="m3e-button m3e-button--text"
-          type="button"
-          hidden
-        ></button>
       </div>
     </div>
     <div id="ma-editor" class="ma-editor-host" data-monaco-anywhere-editor></div>

@@ -17,23 +17,10 @@
         flex-direction: column;
         gap: 10px;
       }
-      .ma-ui .ma-choice {
-        display: flex;
-        align-items: flex-start;
-        padding: 14px 16px;
-        border: 1px solid var(--m3e-sys-color-outline-variant);
-        border-radius: var(--m3e-sys-shape-corner-medium);
-        background-color: var(--m3e-sys-color-surface-container-low);
-      }
-      .ma-ui .ma-choice:has(.m3e-radio-button__input:checked) {
-        border-color: var(--m3e-sys-color-primary);
-        box-shadow: inset 0 0 0 1px var(--m3e-sys-color-primary);
-      }
       .ma-ui .ma-choice__text {
         display: flex;
         flex-direction: column;
         gap: 2px;
-        margin-block-start: 8px;
       }
       .ma-ui .ma-choice__text strong {
         font-weight: var(--m3e-sys-typescale-label-large-weight);
@@ -51,9 +38,6 @@
         margin: 0;
         padding: 12px;
         overflow: auto;
-        border-radius: var(--m3e-sys-shape-corner-medium);
-        background-color: var(--m3e-sys-color-surface-container);
-        color: var(--m3e-sys-color-on-surface);
         font-size: var(--m3e-sys-typescale-body-small-size);
       }
       .ma-ui progress {
@@ -92,7 +76,7 @@
         </li>
       </ol>
 
-      <section id="ma-step-1" class="ma-card" aria-labelledby="ma-step-1-title">
+      <section id="ma-step-1" class="ma-card m3e-card m3e-card--outlined" aria-labelledby="ma-step-1-title">
         <h2 id="ma-step-1-title" data-i18n="onboarding.choose.title"></h2>
         <fieldset class="m3e-radio-group">
           <legend data-i18n="onboarding.choose.legend"></legend>
@@ -142,18 +126,18 @@
         </div>
       </section>
 
-      <section id="ma-step-2" class="ma-card" aria-labelledby="ma-step-2-title" hidden>
+      <section id="ma-step-2" class="ma-card m3e-card m3e-card--outlined" aria-labelledby="ma-step-2-title" hidden>
         <h2 id="ma-step-2-title" data-i18n="onboarding.resources.title"></h2>
         <div id="ma-backend-guidance"></div>
         <div class="ma-validation">
           <p id="ma-resource-description"></p>
-          <p id="ma-resource-status" class="ma-hint" role="status"></p>
+          <p id="ma-resource-status" class="ma-hint" role="status" hidden></p>
           <progress
             id="ma-resource-progress"
             aria-describedby="ma-resource-status"
             hidden
           ></progress>
-          <pre id="ma-resource-detail" class="ma-command" hidden></pre>
+          <pre id="ma-resource-detail" class="ma-command m3e-card m3e-card--outlined" hidden></pre>
           <div class="ma-actions">
             <button
               id="ma-resource-check"
@@ -182,11 +166,11 @@
         </div>
       </section>
 
-      <section id="ma-step-3" class="ma-card" aria-labelledby="ma-step-3-title" hidden>
+      <section id="ma-step-3" class="ma-card m3e-card m3e-card--outlined" aria-labelledby="ma-step-3-title" hidden>
         <h2 id="ma-step-3-title" data-i18n="onboarding.validation.title"></h2>
         <div class="ma-validation">
           <p id="ma-validation-description"></p>
-          <p id="ma-validation-status" class="ma-hint" role="status"></p>
+          <p id="ma-validation-status" class="ma-hint" role="status" hidden></p>
           <div class="ma-actions">
             <button
               id="ma-validate"
@@ -219,11 +203,11 @@
         </div>
       </section>
 
-      <section id="ma-step-4" class="ma-card" aria-labelledby="ma-step-4-title" hidden>
+      <section id="ma-step-4" class="ma-card m3e-card m3e-card--outlined" aria-labelledby="ma-step-4-title" hidden>
         <h2 id="ma-step-4-title" data-i18n="onboarding.complete.title"></h2>
         <div class="ma-validation">
           <p id="ma-complete-description"></p>
-          <p id="ma-complete-status" class="ma-hint" role="status"></p>
+          <p id="ma-complete-status" class="ma-hint" role="status" hidden></p>
           <button
             id="ma-finish"
             class="m3e-button m3e-button--size-m"

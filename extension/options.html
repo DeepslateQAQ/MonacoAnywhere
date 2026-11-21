@@ -7,26 +7,424 @@
     <link rel="stylesheet" href="theme.css" />
     <style>
       .ma-ui {
-        min-block-size: 100vh;
+        block-size: 100dvh;
+        overflow: hidden;
       }
       .ma-ui [hidden] {
         display: none !important;
       }
-      .ma-ui #ma-options-form {
+
+      /* Page shell: the scaffold itself fills the window. */
+      .ma-ui.ma-options-page .ma-options-shell {
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: 0;
+        inline-size: 100%;
+        block-size: 100%;
+        margin: 0;
+        padding: 0;
       }
-      .ma-ui .m3e-text-field {
+
+      .ma-ui .ma-options-layout {
+        flex: 1 1 auto;
+        min-block-size: 0;
+      }
+
+      /* Category pane: Android settings rows with round leading badges. */
+      .ma-ui .ma-options-nav {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-block-size: 0;
+        --m3e-comp-list-item-segmented-shape: 24px;
+        --m3e-comp-list-item-segmented-gap: 4px;
+        --m3e-comp-list-item-shape: 8px;
+        --m3e-comp-list-item-shape-selected: 24px;
+        --m3e-comp-list-item-shape-hovered: 8px;
+        --m3e-comp-list-item-shape-pressed: 24px;
+        --m3e-comp-list-item-shape-focused: 12px;
+        --m3e-comp-list-item-segmented-container-color: var(
+          --m3e-sys-color-surface-container-low
+        );
+      }
+
+      .ma-ui .ma-nav-header {
+        display: grid;
+        gap: 2px;
+        padding: 48px 16px 12px;
+      }
+
+      .ma-ui .ma-nav-header h1 {
+        font-size: var(--m3e-sys-typescale-headline-small-size);
+        font-weight: var(--m3e-sys-typescale-headline-small-weight);
+        line-height: var(--m3e-sys-typescale-headline-small-line-height);
+      }
+
+      .ma-ui .ma-nav-scroll {
+        flex: 1 1 auto;
+        min-block-size: 0;
+        padding: 0 16px 16px;
+        overflow: auto;
+        overscroll-behavior: contain;
+      }
+
+      .ma-ui .ma-options-nav .m3e-list-item {
+        inline-size: 100%;
+        --m3e-comp-list-item-supporting: var(
+          --m3e-sys-color-on-surface-variant
+        );
+      }
+
+      .ma-ui .ma-options-nav .m3e-list-item__supporting {
+        display: block;
+      }
+
+      .ma-ui .ma-nav-badge {
+        display: grid;
+        place-items: center;
+        inline-size: 36px;
+        block-size: 36px;
+        border-radius: var(--m3e-sys-shape-corner-full);
+        background-color: var(--ma-badge-bg);
+        color: var(--ma-badge-fg);
+      }
+
+      .ma-ui .ma-nav-badge .m3e-icon {
+        display: block;
+        inline-size: 20px;
+        block-size: 20px;
+        font-size: 20px;
+        line-height: 20px;
+      }
+
+      .ma-ui .ma-nav-badge--services {
+        --ma-badge-bg: var(--m3e-sys-color-secondary-container);
+        --ma-badge-fg: var(--m3e-sys-color-on-secondary-container);
+      }
+      .ma-ui .ma-nav-badge--editor {
+        --ma-badge-bg: var(--m3e-sys-color-primary-container);
+        --ma-badge-fg: var(--m3e-sys-color-on-primary-container);
+      }
+      .ma-ui .ma-nav-badge--appearance {
+        --ma-badge-bg: var(--m3e-sys-color-tertiary-container);
+        --ma-badge-fg: var(--m3e-sys-color-on-tertiary-container);
+      }
+      .ma-ui .ma-nav-badge--advanced {
+        --ma-badge-bg: var(--m3e-sys-color-secondary-container);
+        --ma-badge-fg: var(--m3e-sys-color-on-secondary-container);
+      }
+      .ma-ui .ma-nav-badge--state {
+        --ma-badge-bg: var(--m3e-sys-color-primary-container);
+        --ma-badge-fg: var(--m3e-sys-color-on-primary-container);
+      }
+
+      /* Settings pane. */
+      .ma-ui .ma-options-detail {
+        container-type: inline-size;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-block-size: 0;
+        block-size: 100%;
+      }
+
+      .ma-ui .ma-detail-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-block-size: 68px;
+        padding: 0 16px;
+      }
+
+      .ma-ui .ma-detail-bar h2 {
+        font-size: var(--m3e-sys-typescale-title-large-size);
+        font-weight: var(--m3e-sys-typescale-title-large-weight);
+        line-height: var(--m3e-sys-typescale-title-large-line-height);
+      }
+
+      .ma-ui .ma-options-form {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-block-size: 0;
+      }
+
+      .ma-ui .ma-panel-scroll {
+        flex: 1 1 auto;
+        min-block-size: 0;
+        padding: 12px 16px 104px;
+        overflow: auto;
+        overscroll-behavior: contain;
+      }
+
+      .ma-ui .ma-panel {
+        display: grid;
+        gap: 24px;
+        max-inline-size: none;
+      }
+
+      /* Grouped rounded cards, the Android Settings list. */
+      .ma-ui .ma-settings-group {
+        display: grid;
+        gap: 8px;
+      }
+
+      .ma-ui .ma-settings-group__label {
+        padding-inline: 0;
+        color: var(--m3e-sys-color-primary);
+        font-size: var(--m3e-sys-typescale-label-large-size);
+        font-weight: var(--m3e-sys-typescale-label-large-weight);
+        line-height: var(--m3e-sys-typescale-label-large-line-height);
+      }
+
+      .ma-ui .ma-settings-card {
+        border-radius: var(--m3e-sys-shape-corner-extra-large);
+        background-color: var(--m3e-sys-color-surface-container-low);
+        overflow: hidden;
+      }
+
+      .ma-ui .ma-row {
+        position: relative;
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 8px 16px;
+        min-block-size: 64px;
+        padding: 16px 20px;
+      }
+
+      .ma-ui .ma-row + .ma-row::before {
+        content: "";
+        position: absolute;
+        inset-block-start: 0;
+        inset-inline: 20px 0;
+        block-size: 1px;
+        background-color: var(--m3e-sys-color-outline-variant);
+        pointer-events: none;
+      }
+
+      .ma-ui label.ma-row {
+        cursor: pointer;
+      }
+
+      .ma-ui button.ma-row--button {
+        inline-size: 100%;
+        border: 0;
+        background-color: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: start;
+        cursor: pointer;
+      }
+
+      .ma-ui button.ma-row--button:hover {
+        background-color: color-mix(
+          in srgb,
+          var(--m3e-sys-color-on-surface) 6%,
+          transparent
+        );
+      }
+
+      .ma-ui button.ma-row--button:focus-visible {
+        outline: 2px solid var(--m3e-sys-color-primary);
+        outline-offset: -2px;
+      }
+
+      .ma-ui .ma-row--button .ma-row__chevron {
+        position: static;
+        inset: auto;
+        flex: none;
+        margin-inline-start: auto;
+      }
+
+      .ma-ui .ma-row__text {
+        display: grid;
+        gap: 2px;
+        flex: 1 1 auto;
         min-inline-size: 0;
       }
-      .ma-ui .ma-select {
-        appearance: auto;
+
+      .ma-ui .ma-row__title {
+        color: var(--m3e-sys-color-on-surface);
+        font-size: var(--m3e-sys-typescale-body-large-size);
+        line-height: var(--m3e-sys-typescale-body-large-line-height);
       }
-      .ma-ui .ma-textarea {
-        min-block-size: 96px;
+
+      .ma-ui .ma-row__support {
+        color: var(--m3e-sys-color-on-surface-variant);
+        font-size: var(--m3e-sys-typescale-body-small-size);
+        line-height: var(--m3e-sys-typescale-body-small-line-height);
+      }
+
+      .ma-ui .ma-row__support.ma-error {
+        color: var(--m3e-sys-color-error);
+      }
+
+      .ma-ui .ma-row__control {
+        position: relative;
+        display: flex;
+        flex: 0 1 16rem;
+        min-inline-size: 0;
+        align-items: center;
+        justify-content: flex-end;
+        margin-inline-start: auto;
+      }
+
+      .ma-ui .ma-row__control:has(> .ma-row-input--number) {
+        flex-basis: 7rem;
+      }
+
+      .ma-ui .ma-row__control:has(> .ma-row-select) {
+        flex-basis: 15rem;
+      }
+
+      .ma-ui .ma-row__control:has(> m3e-button-group) {
+        flex: 0 0 auto;
+        max-inline-size: 100%;
+      }
+
+      /* Keep the scaffold itself from scrolling; only the panel scrolls. */
+      .ma-ui #ma-options-layout .m3e-pane-scaffold__pane {
+        overflow: hidden;
+      }
+
+      .ma-ui .ma-row--stacked .m3e-button-group {
+        inline-size: 100%;
+      }
+
+      .ma-ui .ma-row-select {
+        appearance: none;
+        inline-size: 100%;
+        min-inline-size: 0;
+        padding: 6px 16px 6px 4px;
+        border: 0;
+        border-radius: var(--m3e-sys-shape-corner-small);
+        background-color: transparent;
+        color: var(--m3e-sys-color-on-surface-variant);
+        font: inherit;
+        font-size: var(--m3e-sys-typescale-body-medium-size);
+        text-align: end;
+        text-overflow: ellipsis;
+        cursor: pointer;
+      }
+
+      .ma-ui .ma-row-select:focus-visible {
+        outline: 2px solid var(--m3e-sys-color-primary);
+        outline-offset: 2px;
+      }
+
+      .ma-ui .ma-row__chevron {
+        position: absolute;
+        inset-inline-end: 2px;
+        inline-size: 8px;
+        block-size: 8px;
+        border-inline-end: 2px solid currentColor;
+        border-block-end: 2px solid currentColor;
+        color: var(--m3e-sys-color-on-surface-variant);
+        transform: rotate(-45deg);
+        pointer-events: none;
+      }
+
+      .ma-ui .ma-row-input {
+        inline-size: 100%;
+        min-inline-size: 0;
+        padding: 6px 2px;
+        border: 0;
+        border-block-end: 1px solid var(--m3e-sys-color-outline-variant);
+        border-radius: 0;
+        background-color: transparent;
+        color: var(--m3e-sys-color-on-surface-variant);
+        font: inherit;
+        font-size: var(--m3e-sys-typescale-body-medium-size);
+        text-align: end;
+      }
+
+      .ma-ui .ma-row-input:focus {
+        border-block-end-color: var(--m3e-sys-color-primary);
+        outline: none;
+      }
+
+      .ma-ui .ma-row-input--number {
+        inline-size: 100%;
+      }
+
+      .ma-ui .ma-row--stacked {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .ma-ui .ma-row--support {
+        min-block-size: 0;
+        padding-block: 12px;
+      }
+
+      .ma-ui .ma-row-textarea {
+        min-block-size: 76px;
+        padding: 10px 12px;
+        border: 1px solid var(--m3e-sys-color-outline-variant);
+        border-radius: var(--m3e-sys-shape-corner-medium);
+        background-color: var(--m3e-sys-color-surface-container);
+        color: var(--m3e-sys-color-on-surface);
+        font: inherit;
+        font-size: var(--m3e-sys-typescale-body-medium-size);
         resize: vertical;
       }
+
+      .ma-ui .ma-row-textarea:focus {
+        border-color: var(--m3e-sys-color-primary);
+        outline: none;
+      }
+
+      .ma-ui .ma-panel-status {
+        padding: 8px 16px;
+        padding-inline-end: 152px;
+        border-block-start: 1px solid var(--m3e-sys-color-outline-variant);
+      }
+
+      /* The pane is a scroll region we focus programmatically, not a control. */
+      .ma-ui #ma-options-layout .m3e-pane-scaffold__pane:focus-visible {
+        outline: none;
+      }
+
+      .ma-ui .ma-save-fab {
+        position: absolute;
+        inset-block-end: 16px;
+        inset-inline-end: 16px;
+        z-index: 1;
+      }
+
+      .ma-ui .ma-back svg {
+        inline-size: 24px;
+        block-size: 24px;
+        fill: currentColor;
+      }
+
+      @container (max-width: 560px) {
+        .ma-ui .ma-row {
+          flex-wrap: wrap;
+        }
+        .ma-ui .ma-row__control {
+          flex: 1 1 100%;
+          margin-inline-start: 0;
+          justify-content: flex-start;
+        }
+        .ma-ui .ma-row__control .m3e-button-group {
+          inline-size: 100%;
+        }
+        .ma-ui .ma-row__control:has(> .ma-row-input--number) {
+          flex: 0 1 7rem;
+          margin-inline-start: auto;
+        }
+        .ma-ui .ma-row-input,
+        .ma-ui .ma-row-select {
+          text-align: start;
+        }
+        .ma-ui .ma-row-input--number {
+          text-align: end;
+        }
+      }
+
       .ma-ui .ma-loading-slot {
         display: flex;
         justify-content: center;
@@ -37,260 +435,552 @@
       }
     </style>
   </head>
-  <body class="ma-ui">
-    <main class="ma-shell" aria-labelledby="ma-title">
-      <header>
-        <p class="ma-eyebrow" id="ma-build-mode"></p>
-        <h1 id="ma-title" data-i18n="options.title"></h1>
-        <p class="ma-intro" data-i18n="options.intro"></p>
-      </header>
-
-      <div id="ma-options-loading" class="ma-loading-slot"></div>
-
-      <section class="ma-card">
-        <h2 data-i18n="options.services.title"></h2>
-        <form id="ma-options-form">
-          <div class="ma-grid">
-            <label
-              class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
+  <body class="ma-ui ma-options-page">
+    <main class="ma-shell ma-options-shell" aria-labelledby="ma-title">
+      <m3e-list-detail-layout
+        id="ma-options-layout"
+        class="ma-options-layout"
+        list-label=""
+        detail-label=""
+      >
+        <nav slot="list" class="ma-options-nav">
+          <header class="ma-nav-header">
+            <h1 id="ma-title" data-i18n="options.title"></h1>
+          </header>
+          <div id="ma-options-loading" class="ma-loading-slot"></div>
+          <div class="ma-nav-scroll">
+            <m3e-list
+              id="ma-options-nav-list"
+              label=""
+              selection-mode="single"
+              disallow-empty-selection
             >
-              <span
-                class="m3e-text-field__label"
-                data-i18n="options.backend.label"
-              ></span>
-              <span class="m3e-text-field__container">
-                <select id="ma-backend" class="m3e-text-field__input ma-select">
-                  <option value="" data-i18n="options.backend.none"></option>
-                  <option value="wasm" data-i18n="options.backend.wasm"></option>
-                  <option value="native" data-i18n="options.backend.native"></option>
-                </select>
-                <span class="m3e-text-field__outline"></span>
-              </span>
-              <span class="m3e-text-field__supporting">
-                <span
-                  class="m3e-text-field__supporting-text"
-                  data-i18n="options.backend.help"
-                ></span>
-              </span>
-            </label>
-
-            <label
-              class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
-            >
-              <span
-                class="m3e-text-field__label"
-                data-i18n="options.theme.label"
-              ></span>
-              <span class="m3e-text-field__container">
-                <select id="ma-theme" class="m3e-text-field__input ma-select">
-                  <option value="system" data-i18n="options.theme.system"></option>
-                  <option value="light" data-i18n="options.theme.light"></option>
-                  <option value="dark" data-i18n="options.theme.dark"></option>
-                </select>
-                <span class="m3e-text-field__outline"></span>
-              </span>
-            </label>
-
-            <label
-              class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
-            >
-              <span
-                class="m3e-text-field__label"
-                data-i18n="options.locale.label"
-              ></span>
-              <span class="m3e-text-field__container">
-                <select id="ma-locale" class="m3e-text-field__input ma-select">
-                  <option value="auto" data-i18n="options.locale.auto"></option>
-                  <option value="zh-CN" data-i18n="options.locale.zh"></option>
-                  <option value="en" data-i18n="options.locale.en"></option>
-                </select>
-                <span class="m3e-text-field__outline"></span>
-              </span>
-            </label>
-
-            <label
-              class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
-            >
-              <span
-                class="m3e-text-field__label"
-                data-i18n="options.hiddenPause.label"
-              ></span>
-              <span class="m3e-text-field__container">
-                <input
-                  id="ma-hidden-pause"
-                  class="m3e-text-field__input"
-                  type="number"
-                  min="1000"
-                  max="86400000"
-                  step="1000"
-                  inputmode="numeric"
-                />
-                <span class="m3e-text-field__outline"></span>
-              </span>
-              <span class="m3e-text-field__supporting">
-                <span
-                  class="m3e-text-field__supporting-text"
-                  data-i18n="options.hiddenPause.help"
-                ></span>
-              </span>
-            </label>
-
-            <label
-              class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
-            >
-              <span
-                class="m3e-text-field__label"
-                data-i18n="options.clangdPath.label"
-              ></span>
-              <span class="m3e-text-field__container">
-                <input
-                  id="ma-clangd-path"
-                  class="m3e-text-field__input"
-                  type="text"
-                  autocomplete="off"
-                  spellcheck="false"
-                  data-i18n-placeholder="options.clangdPath.placeholder"
-                />
-                <span class="m3e-text-field__outline"></span>
-              </span>
-              <span class="m3e-text-field__supporting">
-                <span
-                  class="m3e-text-field__supporting-text"
-                  data-i18n="options.clangdPath.help"
-                ></span>
-              </span>
-            </label>
-
-            <label
-              class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
-            >
-              <span
-                class="m3e-text-field__label"
-                data-i18n="options.editorFont.label"
-              ></span>
-              <span class="m3e-text-field__container">
-                <input
-                  id="ma-editor-font"
-                  class="m3e-text-field__input"
-                  type="text"
-                  autocomplete="off"
-                  spellcheck="false"
-                  placeholder="monospace"
-                />
-                <span class="m3e-text-field__outline"></span>
-              </span>
-              <span class="m3e-text-field__supporting">
-                <span
-                  class="m3e-text-field__supporting-text"
-                  data-i18n="options.editorFont.help"
-                ></span>
-              </span>
-            </label>
-
-            <label
-              class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
-            >
-              <span
-                class="m3e-text-field__label"
-                data-i18n="options.editorTheme.label"
-              ></span>
-              <span class="m3e-text-field__container">
-                <select
-                  id="ma-editor-theme"
-                  class="m3e-text-field__input"
-                ></select>
-                <span class="m3e-text-field__outline"></span>
-              </span>
-            </label>
-          </div>
-
-          <fieldset>
-            <legend data-i18n="options.advanced.legend"></legend>
-            <div class="ma-grid">
-              <label
-                class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
-              >
-                <span
-                  class="m3e-text-field__label"
-                  data-i18n="options.queryDriver.label"
-                ></span>
-                <span class="m3e-text-field__container">
-                  <textarea
-                    id="ma-query-driver"
-                    class="m3e-text-field__input ma-textarea"
-                    spellcheck="false"
-                    data-i18n-placeholder="options.queryDriver.placeholder"
-                  ></textarea>
-                  <span class="m3e-text-field__outline"></span>
+            <div class="m3e-list-item m3e-list-item--segmented" data-value="services">
+              <span class="m3e-list-item__leading">
+                <span class="ma-nav-badge ma-nav-badge--services">
+                  <span class="m3e-icon" aria-hidden="true">terminal</span>
                 </span>
-                <span class="m3e-text-field__supporting">
-                  <span
-                    class="m3e-text-field__supporting-text"
-                    data-i18n="options.queryDriver.help"
-                  ></span>
-                </span>
-              </label>
-
-              <label
-                class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above"
-              >
+              </span>
+              <span class="m3e-list-item__content">
                 <span
-                  class="m3e-text-field__label"
-                  data-i18n="options.extraIncludes.label"
+                  class="m3e-list-item__headline"
+                  data-i18n="options.nav.services"
                 ></span>
-                <span class="m3e-text-field__container">
-                  <textarea
-                    id="ma-extra-includes"
-                    class="m3e-text-field__input ma-textarea"
-                    spellcheck="false"
-                    data-i18n-placeholder="options.extraIncludes.placeholder"
-                  ></textarea>
-                  <span class="m3e-text-field__outline"></span>
-                </span>
-                <span class="m3e-text-field__supporting">
-                  <span
-                    class="m3e-text-field__supporting-text"
-                    data-i18n="options.extraIncludes.help"
-                  ></span>
-                </span>
-              </label>
+                <span
+                  class="m3e-list-item__supporting"
+                  data-i18n="options.nav.services.help"
+                ></span>
+              </span>
             </div>
-          </fieldset>
-
-          <div class="ma-actions">
-            <button
-              class="m3e-button m3e-button--size-m"
-              type="submit"
-              data-i18n="options.save"
-            ></button>
-            <button
-              id="ma-open-setup"
-              class="m3e-button m3e-button--outlined m3e-button--size-m"
-              type="button"
-              data-i18n="options.openSetup"
-            ></button>
+            <div class="m3e-list-item m3e-list-item--segmented" data-value="editor">
+              <span class="m3e-list-item__leading">
+                <span class="ma-nav-badge ma-nav-badge--editor">
+                  <span class="m3e-icon" aria-hidden="true">code</span>
+                </span>
+              </span>
+              <span class="m3e-list-item__content">
+                <span
+                  class="m3e-list-item__headline"
+                  data-i18n="options.nav.editor"
+                ></span>
+                <span
+                  class="m3e-list-item__supporting"
+                  data-i18n="options.nav.editor.help"
+                ></span>
+              </span>
+            </div>
+            <div class="m3e-list-item m3e-list-item--segmented" data-value="appearance">
+              <span class="m3e-list-item__leading">
+                <span class="ma-nav-badge ma-nav-badge--appearance">
+                  <span class="m3e-icon" aria-hidden="true">settings</span>
+                </span>
+              </span>
+              <span class="m3e-list-item__content">
+                <span
+                  class="m3e-list-item__headline"
+                  data-i18n="options.nav.appearance"
+                ></span>
+                <span
+                  class="m3e-list-item__supporting"
+                  data-i18n="options.nav.appearance.help"
+                ></span>
+              </span>
+            </div>
+            <div class="m3e-list-item m3e-list-item--segmented" data-value="advanced">
+              <span class="m3e-list-item__leading">
+                <span class="ma-nav-badge ma-nav-badge--advanced">
+                  <span class="m3e-icon" aria-hidden="true">sync</span>
+                </span>
+              </span>
+              <span class="m3e-list-item__content">
+                <span
+                  class="m3e-list-item__headline"
+                  data-i18n="options.nav.advanced"
+                ></span>
+                <span
+                  class="m3e-list-item__supporting"
+                  data-i18n="options.nav.advanced.help"
+                ></span>
+              </span>
+            </div>
+            <div class="m3e-list-item m3e-list-item--segmented" data-value="state">
+              <span class="m3e-list-item__leading">
+                <span class="ma-nav-badge ma-nav-badge--state">
+                  <span class="m3e-icon" aria-hidden="true">info</span>
+                </span>
+              </span>
+              <span class="m3e-list-item__content">
+                <span
+                  class="m3e-list-item__headline"
+                  data-i18n="options.nav.state"
+                ></span>
+                <span
+                  class="m3e-list-item__supporting"
+                  data-i18n="options.nav.state.help"
+                ></span>
+              </span>
+            </div>
+            </m3e-list>
           </div>
-        </form>
+        </nav>
 
-        <div id="ma-options-status" class="ma-status" role="status" hidden></div>
-      </section>
+        <div slot="detail" class="ma-options-detail">
+          <div class="ma-detail-bar">
+            <button
+              class="m3e-icon-button m3e-icon-button--standard ma-back"
+              type="button"
+              data-pane-navigate="back"
+              data-i18n-aria-label="options.back"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path
+                  d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"
+                />
+              </svg>
+            </button>
+            <h2 id="ma-panel-title"></h2>
+          </div>
 
-      <section class="ma-card" aria-labelledby="ma-state-title">
-        <h2 id="ma-state-title" data-i18n="options.state.title"></h2>
-        <p id="ma-oobe-state"></p>
-        <p id="ma-site-overrides" class="ma-meta"></p>
-        <button
-          id="ma-reset-sites"
-          class="m3e-button m3e-button--text"
-          type="button"
-          data-i18n="options.resetSites"
-        ></button>
-        <p class="ma-note" data-i18n="options.state.note"></p>
-        <p class="ma-meta">
-          <span data-i18n="common.extensionId"></span>:
-          <code id="ma-extension-id"></code>
-        </p>
-      </section>
+          <form id="ma-options-form" class="ma-options-form">
+            <div class="ma-panel-scroll">
+              <section class="ma-panel" data-panel="services">
+                <div class="ma-settings-group">
+                  <span
+                    class="ma-settings-group__label"
+                    data-i18n="options.group.backend"
+                  ></span>
+                  <div class="ma-settings-card">
+                    <div class="ma-row">
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__title"
+                          data-i18n="options.backend.label"
+                        ></span>
+                        <span
+                          class="ma-row__support"
+                          data-i18n="options.backend.help"
+                        ></span>
+                      </span>
+                      <span class="ma-row__control">
+                        <m3e-button-group
+                          id="ma-backend-group"
+                          variant="connected"
+                          button-variant="tonal"
+                          size="s"
+                          selection-mode="single"
+                          disallow-empty-selection
+                        >
+                          <m3e-button-group-item
+                            value=""
+                            data-i18n="options.backend.noneShort"
+                          ></m3e-button-group-item>
+                          <m3e-button-group-item
+                            value="wasm"
+                            data-i18n="options.backend.wasmShort"
+                          ></m3e-button-group-item>
+                          <m3e-button-group-item
+                            value="native"
+                            data-i18n="options.backend.nativeShort"
+                          ></m3e-button-group-item>
+                        </m3e-button-group>
+                      </span>
+                    </div>
+                    <div class="ma-row">
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__title"
+                          data-i18n="options.validation.title"
+                        ></span>
+                        <span
+                          id="ma-backend-validation"
+                          class="ma-row__support"
+                        ></span>
+                      </span>
+                      <button
+                        id="ma-validate-backend"
+                        class="m3e-button m3e-button--tonal"
+                        type="button"
+                        data-i18n="options.validation.run"
+                      ></button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="ma-settings-group">
+                  <span
+                    class="ma-settings-group__label"
+                    data-i18n="options.group.local"
+                  ></span>
+                  <div class="ma-settings-card">
+                    <label class="ma-row">
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__title"
+                          data-i18n="options.clangdPath.label"
+                        ></span>
+                        <span
+                          class="ma-row__support"
+                          data-i18n="options.clangdPath.help"
+                        ></span>
+                      </span>
+                      <span class="ma-row__control">
+                        <input
+                          id="ma-clangd-path"
+                          class="ma-row-input"
+                          type="text"
+                          autocomplete="off"
+                          spellcheck="false"
+                          data-i18n-placeholder="options.clangdPath.placeholder"
+                        />
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </section>
+
+              <section class="ma-panel" data-panel="editor" hidden>
+                <div class="ma-settings-group">
+                  <span
+                    class="ma-settings-group__label"
+                    data-i18n="options.group.editor"
+                  ></span>
+                  <div class="ma-settings-card">
+                    <label class="ma-row">
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__title"
+                          data-i18n="options.editorFont.label"
+                        ></span>
+                        <span
+                          class="ma-row__support"
+                          data-i18n="options.editorFont.help"
+                        ></span>
+                      </span>
+                      <span class="ma-row__control">
+                        <input
+                          id="ma-editor-font"
+                          class="ma-row-input"
+                          type="text"
+                          autocomplete="off"
+                          spellcheck="false"
+                          placeholder="monospace"
+                        />
+                      </span>
+                    </label>
+                    <label class="ma-row">
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__title"
+                          data-i18n="options.editorTheme.label"
+                        ></span>
+                      </span>
+                      <span class="ma-row__control">
+                        <select
+                          id="ma-editor-theme"
+                          class="ma-row-select"
+                        ></select>
+                        <span class="ma-row__chevron" aria-hidden="true"></span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="ma-settings-group">
+                  <span
+                    class="ma-settings-group__label"
+                    data-i18n="options.group.behavior"
+                  ></span>
+                  <div class="ma-settings-card">
+                    <label class="ma-row">
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__title"
+                          data-i18n="options.hiddenPause.label"
+                        ></span>
+                        <span
+                          class="ma-row__support"
+                          data-i18n="options.hiddenPause.help"
+                        ></span>
+                      </span>
+                      <span class="ma-row__control">
+                        <input
+                          id="ma-hidden-pause"
+                          class="ma-row-input ma-row-input--number"
+                          type="number"
+                          min="1000"
+                          max="86400000"
+                          step="1000"
+                          inputmode="numeric"
+                        />
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </section>
+
+              <section class="ma-panel" data-panel="appearance" hidden>
+                <div class="ma-settings-group">
+                  <span
+                    class="ma-settings-group__label"
+                    data-i18n="options.group.theme"
+                  ></span>
+                  <div class="ma-settings-card">
+                    <div class="ma-row">
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__title"
+                          data-i18n="options.theme.label"
+                        ></span>
+                      </span>
+                      <span class="ma-row__control">
+                        <m3e-button-group
+                          id="ma-theme-group"
+                          variant="connected"
+                          button-variant="tonal"
+                          size="s"
+                          selection-mode="single"
+                          disallow-empty-selection
+                        >
+                          <m3e-button-group-item
+                            value="system"
+                            data-i18n="options.theme.system"
+                          ></m3e-button-group-item>
+                          <m3e-button-group-item
+                            value="light"
+                            data-i18n="options.theme.light"
+                          ></m3e-button-group-item>
+                          <m3e-button-group-item
+                            value="dark"
+                            data-i18n="options.theme.dark"
+                          ></m3e-button-group-item>
+                        </m3e-button-group>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="ma-settings-group">
+                  <span
+                    class="ma-settings-group__label"
+                    data-i18n="options.group.language"
+                  ></span>
+                  <div class="ma-settings-card">
+                    <div class="ma-row">
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__title"
+                          data-i18n="options.locale.label"
+                        ></span>
+                      </span>
+                      <span class="ma-row__control">
+                        <m3e-button-group
+                          id="ma-locale-group"
+                          variant="connected"
+                          button-variant="tonal"
+                          size="s"
+                          selection-mode="single"
+                          disallow-empty-selection
+                        >
+                          <m3e-button-group-item
+                            value="auto"
+                            data-i18n="options.locale.auto"
+                          ></m3e-button-group-item>
+                          <m3e-button-group-item
+                            value="zh-CN"
+                            data-i18n="options.locale.zh"
+                          ></m3e-button-group-item>
+                          <m3e-button-group-item
+                            value="en"
+                            data-i18n="options.locale.en"
+                          ></m3e-button-group-item>
+                        </m3e-button-group>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="ma-panel" data-panel="advanced" hidden>
+                <div class="ma-settings-group">
+                  <span
+                    class="ma-settings-group__label"
+                    data-i18n="options.group.compiler"
+                  ></span>
+                  <div class="ma-settings-card">
+                    <label class="ma-row ma-row--stacked">
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__title"
+                          data-i18n="options.queryDriver.label"
+                        ></span>
+                        <span
+                          class="ma-row__support"
+                          data-i18n="options.queryDriver.help"
+                        ></span>
+                      </span>
+                      <textarea
+                        id="ma-query-driver"
+                        class="ma-row-textarea"
+                        spellcheck="false"
+                        data-i18n-placeholder="options.queryDriver.placeholder"
+                      ></textarea>
+                    </label>
+                    <label class="ma-row ma-row--stacked">
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__title"
+                          data-i18n="options.extraIncludes.label"
+                        ></span>
+                        <span
+                          class="ma-row__support"
+                          data-i18n="options.extraIncludes.help"
+                        ></span>
+                      </span>
+                      <textarea
+                        id="ma-extra-includes"
+                        class="ma-row-textarea"
+                        spellcheck="false"
+                        data-i18n-placeholder="options.extraIncludes.placeholder"
+                      ></textarea>
+                    </label>
+                  </div>
+                </div>
+              </section>
+
+              <section class="ma-panel" data-panel="state" hidden>
+                <div class="ma-settings-group">
+                  <span
+                    class="ma-settings-group__label"
+                    data-i18n="options.group.setup"
+                  ></span>
+                  <div class="ma-settings-card">
+                    <div class="ma-row">
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__title"
+                          data-i18n="options.nav.state"
+                        ></span>
+                        <span id="ma-oobe-state" class="ma-row__support"></span>
+                      </span>
+                    </div>
+                    <div class="ma-row">
+                      <span class="ma-row__text">
+                        <span
+                          id="ma-site-overrides"
+                          class="ma-row__title"
+                        ></span>
+                        <span
+                          class="ma-row__support"
+                          data-i18n="options.state.overridesHelp"
+                        ></span>
+                      </span>
+                      <button
+                        id="ma-reset-sites"
+                        class="m3e-button m3e-button--text"
+                        type="button"
+                        data-i18n="options.resetSites"
+                      ></button>
+                    </div>
+                    <div class="ma-row ma-row--support">
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__support"
+                          data-i18n="options.state.note"
+                        ></span>
+                      </span>
+                    </div>
+                    <button
+                      id="ma-open-setup"
+                      class="ma-row ma-row--button"
+                      type="button"
+                    >
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__title"
+                          data-i18n="options.openSetup"
+                        ></span>
+                      </span>
+                      <span class="ma-row__chevron" aria-hidden="true"></span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="ma-settings-group">
+                  <span
+                    class="ma-settings-group__label"
+                    data-i18n="options.group.about"
+                  ></span>
+                  <div class="ma-settings-card">
+                    <div class="ma-row">
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__title"
+                          data-i18n="common.extensionId"
+                        ></span>
+                        <span class="ma-row__support"
+                          ><code id="ma-extension-id"></code
+                        ></span>
+                      </span>
+                    </div>
+                    <div class="ma-row ma-row--support">
+                      <span class="ma-row__text">
+                        <span class="ma-row__support" id="ma-build-mode"></span>
+                      </span>
+                    </div>
+                    <div class="ma-row ma-row--support">
+                      <span class="ma-row__text">
+                        <span
+                          class="ma-row__support"
+                          data-i18n="options.intro"
+                        ></span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div
+              id="ma-options-status"
+              class="ma-status ma-panel-status"
+              role="status"
+              hidden
+            ></div>
+
+            <button
+              id="ma-save"
+              class="m3e-extended-fab ma-save-fab"
+              type="submit"
+            >
+              <span class="m3e-icon" aria-hidden="true">check</span>
+              <span
+                class="m3e-extended-fab__label"
+                data-i18n="options.saveShort"
+              ></span>
+            </button>
+          </form>
+        </div>
+      </m3e-list-detail-layout>
     </main>
 
     <script type="module" src="options.js"></script>

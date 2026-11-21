@@ -102,15 +102,7 @@ export async function chooseLanguageOption(
     fieldset.append(
       el(
         "label",
-        {
-          class: "ma-choice m3e-radio-button",
-          style: {
-            display: "flex",
-            alignItems: "flex-start",
-            gap: "8px",
-            padding: "8px 0"
-          }
-        },
+        { class: "m3e-radio-button" },
         [
           el("input", {
             class: "m3e-radio-button__input",

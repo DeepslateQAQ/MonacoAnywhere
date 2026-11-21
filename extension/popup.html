@@ -8,6 +8,7 @@
     <style>
       .ma-ui.ma-popup-page {
         inline-size: 380px;
+        max-inline-size: 100%;
         min-block-size: 0;
         padding: 14px;
       }
@@ -16,36 +17,32 @@
       }
       .ma-ui .ma-popup {
         display: grid;
-        gap: 12px;
+        gap: 10px;
+      }
+      .ma-ui .ma-popup .ma-card {
+        padding: 12px;
       }
       .ma-ui .ma-popup__header {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 12px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0 8px;
+      }
+      .ma-ui .ma-popup__header > div {
+        display: contents;
       }
       .ma-ui .ma-popup__header h1 {
+        grid-column: 1 / -1;
         margin: 0;
         font-size: 22px;
         line-height: 28px;
       }
       .ma-ui .ma-popup__state {
         flex: 0 0 auto;
-        padding: 3px 9px;
-        border-radius: 999px;
-        background: var(--m3e-sys-color-surface-container-highest);
         color: var(--m3e-sys-color-on-surface-variant);
         font-size: 11.5px;
         font-weight: 600;
         line-height: 18px;
-      }
-      .ma-ui .ma-popup__state[data-state="ready"] {
-        background: var(--m3e-sys-color-secondary-container);
-        color: var(--m3e-sys-color-on-secondary-container);
-      }
-      .ma-ui .ma-popup__state[data-state="warn"] {
-        background: var(--m3e-sys-color-tertiary-container);
-        color: var(--m3e-sys-color-on-tertiary-container);
       }
       .ma-ui .ma-popup__status {
         gap: 8px;
@@ -91,25 +88,10 @@
         inline-size: 100%;
       }
       .ma-ui .ma-popup__select {
-        box-sizing: border-box;
-        inline-size: 100%;
-        block-size: 38px;
-        padding: 0 10px;
-        border: 1px solid var(--m3e-sys-color-outline);
-        border-radius: 8px;
-        background: var(--m3e-sys-color-surface);
-        color: var(--m3e-sys-color-on-surface);
-        font: inherit;
-        font-size: 13px;
-      }
-      .ma-ui .ma-popup__select:focus-visible {
-        outline: 2px solid var(--m3e-sys-color-primary);
-        outline-offset: 1px;
+        min-inline-size: 0;
       }
       .ma-ui .ma-popup__enable {
         align-self: flex-start;
-        min-block-size: 30px;
-        padding: 0 10px;
       }
       .ma-ui .ma-popup__actions {
         display: grid;
@@ -151,7 +133,7 @@
       </header>
 
       <section
-        class="ma-card ma-popup__status"
+        class="ma-card m3e-card m3e-card--outlined ma-popup__status"
         data-i18n-aria-label="popup.statusAria"
       >
         <div class="ma-popup__row">
@@ -177,7 +159,7 @@
 
       <div id="ma-popup-loading" class="ma-loading-slot"></div>
 
-      <section class="ma-card ma-popup__controls">
+      <section class="ma-card m3e-card m3e-card--outlined ma-popup__controls">
         <div class="ma-popup__control">
           <span
             id="ma-backend-label"
@@ -220,12 +202,18 @@
             </button>
           </div>
         </div>
-        <label class="ma-popup__control" for="ma-popup-theme">
+        <label
+          class="m3e-text-field m3e-text-field--outlined m3e-text-field--label-above ma-popup__select"
+          for="ma-popup-theme"
+        >
           <span
-            class="ma-popup__control-label"
+            class="m3e-text-field__label"
             data-i18n="popup.theme.label"
           ></span>
-          <select id="ma-popup-theme" class="ma-popup__select"></select>
+          <span class="m3e-text-field__container">
+            <select id="ma-popup-theme" class="m3e-text-field__input"></select>
+            <span class="m3e-text-field__outline"></span>
+          </span>
         </label>
       </section>
 

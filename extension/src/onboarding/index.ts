@@ -19,6 +19,7 @@ import {
 } from "../background/state.js";
 import { getLocale, setLocale, t, type MessageKey } from "../ui/i18n.js";
 import { el, setStatus } from "../ui/primitives.js";
+import { Snackbar } from "../ui/snackbar.js";
 import {
   describePackError,
   detectNativeHost,
@@ -47,6 +48,9 @@ const STEPS: readonly Step[] = [1, 2, 3, 4];
 
 // Localize static markup immediately; getSettings() refines this below.
 setLocale("auto");
+
+const snackbar = new Snackbar(document.body);
+window.addEventListener("pagehide", () => snackbar.clear(), { once: true });
 
 function requireElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -93,9 +97,15 @@ function applyThemePreference(theme: Settings["theme"]): void {
 }
 
 function showStatus(kind: "info" | "error", text: string): void {
+  snackbar.clear();
   const node = requireElement("ma-onboarding-status");
   setStatus(node, { kind, text });
   node.hidden = text.length === 0;
+}
+
+function showSuccess(text: string): void {
+  showStatus("info", "");
+  snackbar.show(text);
 }
 
 function showStep(step: Step): void {
@@ -227,7 +237,9 @@ function resourceErrorText(error: PackErrorDescription): string {
 }
 
 function setResourceStatus(kind: "info" | "error", text: string): void {
-  setStatus(requireElement("ma-resource-status"), { kind, text });
+  const node = requireElement("ma-resource-status");
+  setStatus(node, { kind, text });
+  node.hidden = text.length === 0;
 }
 
 function renderResourceProgress(): void {
@@ -248,7 +260,6 @@ function renderResourceProgress(): void {
 }
 
 function renderWasmResourceState(): void {
-  const statusNode = requireElement("ma-resource-status");
   const detail = requireElement("ma-resource-detail");
 
   if (resourceOperation === "check") {
@@ -295,7 +306,6 @@ function renderWasmResourceState(): void {
   const details = wasmError?.details;
   detail.hidden = details === undefined;
   detail.textContent = details ?? "";
-  statusNode.hidden = false;
   renderResourceProgress();
 }
 
@@ -349,7 +359,7 @@ function renderResourceStep(): void {
   nextButton.disabled = false;
   extra.append(
     el("p", { class: "ma-meta" }, [t("onboarding.resources.nativeCommand")]),
-    el("pre", { class: "ma-command" }, [
+    el("pre", { class: "ma-command m3e-card m3e-card--outlined" }, [
       el("code", {}, [
         `monacoanywhere-host install --extension-id ${chrome.runtime.id}`
       ])
@@ -374,6 +384,7 @@ async function refreshWasmPack(): Promise<void> {
   wasmError = null;
   packProgress = null;
   renderResourceStep();
+  showStatus("info", "");
   try {
     const status = await inspectWasmPack();
     wasmStatus = status;
@@ -385,7 +396,6 @@ async function refreshWasmPack(): Promise<void> {
     wasmError = describePackError(error);
     wasmStatus = null;
     wasmReady = false;
-    showStatus("error", resourceErrorText(wasmError));
   } finally {
     resourceOperation = null;
     renderResourceStep();
@@ -423,66 +433,48 @@ async function runWasmInstall(): Promise<void> {
     packProgress = null;
     wasmError = null;
     validationError = null;
-    const text = t(
-      status.downloaded
-        ? "onboarding.resources.installSuccess"
-        : "onboarding.resources.installed",
-      packVars(status)
-    );
-    showStatus("info", text);
   } catch (error: unknown) {
     wasmError = describePackError(error);
     wasmReady = false;
     packProgress = null;
-    showStatus("error", resourceErrorText(wasmError));
   } finally {
     resourceOperation = null;
     renderResourceStep();
   }
 }
 
-function applyNativeDetection(detection: NativeDetection): string {
+function applyNativeDetection(detection: NativeDetection): void {
   switch (detection.status) {
     case "responded": {
-      const text = t("onboarding.resources.nativeResponded", {
-        detail: detection.summary
-      });
       nativeStatus = {
         kind: "info",
         key: "onboarding.resources.nativeResponded",
         vars: { detail: detection.summary }
       };
-      return text;
+      return;
     }
     case "missing": {
-      const text = t("onboarding.resources.nativeMissing", {
-        error: detection.error
-      });
       nativeStatus = {
         kind: "error",
         key: "onboarding.resources.nativeMissing",
         vars: { error: detection.error }
       };
-      return text;
+      return;
     }
     case "empty": {
-      const text = t("onboarding.resources.nativeEmpty");
       nativeStatus = {
         kind: "error",
         key: "onboarding.resources.nativeEmpty"
       };
-      return text;
+      return;
     }
     case "failed": {
-      const text = t("onboarding.resources.nativeFailed", {
-        error: detection.error
-      });
       nativeStatus = {
         kind: "error",
         key: "onboarding.resources.nativeFailed",
         vars: { error: detection.error }
       };
-      return text;
+      return;
     }
   }
 }
@@ -499,20 +491,13 @@ async function detectNativeResource(): Promise<void> {
   renderResourceStep();
   showStatus("info", "");
   try {
-    const text = applyNativeDetection(await detectNativeHost());
-    if (nativeStatus?.kind === "error") {
-      showStatus("error", text);
-    }
+    applyNativeDetection(await detectNativeHost());
   } catch (error: unknown) {
-    const text = t("onboarding.resources.nativeFailed", {
-      error: String(error)
-    });
     nativeStatus = {
       kind: "error",
       key: "onboarding.resources.nativeFailed",
       vars: { error: String(error) }
     };
-    showStatus("error", text);
   } finally {
     resourceOperation = null;
     renderResourceStep();
@@ -576,6 +561,7 @@ function renderValidationStep(): void {
   }
 
   setStatus(status, { kind, text });
+  status.hidden = text.length === 0;
 
   requireElement<HTMLButtonElement>("ma-validate").disabled =
     backend === null || validationBusy;
@@ -601,9 +587,12 @@ function renderCompletionStep(): void {
     : complete
       ? t("onboarding.complete.stored")
       : t("onboarding.complete.blocked");
-  requireElement("ma-complete-status").textContent = success
+  const status = requireElement("ma-complete-status");
+  const text = success
     ? t("onboarding.complete.ready")
     : t("onboarding.complete.requirementStatus");
+  setStatus(status, { kind: "info", text });
+  status.hidden = text.length === 0;
   requireElement<HTMLButtonElement>("ma-finish").disabled = !success;
 }
 
@@ -677,6 +666,7 @@ async function checkValidation(): Promise<void> {
   validationStage = "starting";
   validationError = null;
   validationResult = null;
+  showStatus("info", "");
   renderValidationStep();
   renderCompletionStep();
 
@@ -690,13 +680,11 @@ async function checkValidation(): Promise<void> {
 
     if (!outcome.ok) {
       validationError = validationFailureText(outcome);
-      showStatus("error", validationError);
       return;
     }
 
     if (outcome.count <= 0) {
       validationError = t("onboarding.validation.zeroItems");
-      showStatus("error", validationError);
       return;
     }
 
@@ -705,25 +693,19 @@ async function checkValidation(): Promise<void> {
       currentSettings = next;
       validationResult = { backend, count: outcome.count };
       validationError = null;
-      const text = t("onboarding.validation.success", {
-        count: outcome.count
-      });
       renderCompletionStep();
       showStep(4);
-      showStatus("info", text);
     } catch (error: unknown) {
       validationResult = null;
       validationError = t("onboarding.validation.markFailed", {
         count: outcome.count,
         error: String(error)
       });
-      showStatus("error", validationError);
     }
   } catch (error: unknown) {
     validationError = t("onboarding.validation.failed", {
       error: String(error)
     });
-    showStatus("error", validationError);
   } finally {
     validationBusy = false;
     validationStage = null;
@@ -750,7 +732,7 @@ async function commitBackend(backend: BackendChoice): Promise<void> {
     setRadio(settings.backend);
     renderBackendGuidance(settings.backend);
     enterResourceStep();
-    showStatus("info", t("onboarding.info.saved"));
+    showSuccess(t("onboarding.info.saved"));
   } catch (error: unknown) {
     showStatus(
       "error",
@@ -815,7 +797,6 @@ function wireEvents(): void {
     }
     renderValidationStep();
     showStep(3);
-    showStatus("info", t("onboarding.validation.readyToCheck"));
   });
 
   requireElement("ma-back-3").addEventListener("click", () => {
@@ -896,7 +877,7 @@ async function initialise(): Promise<void> {
     showStatus("info", t("onboarding.info.completeStored"));
   }
 
-  subscribeSettings((settings) => {
+  const unsubscribe = subscribeSettings((settings) => {
     const previousBackend = currentSettings?.backend ?? null;
     currentSettings = settings;
     if (settings.backend !== previousBackend) {
@@ -927,6 +908,7 @@ async function initialise(): Promise<void> {
       void refreshWasmPack();
     }
   });
+  window.addEventListener("pagehide", unsubscribe, { once: true });
 }
 
 void initialise().catch((error: unknown) => {

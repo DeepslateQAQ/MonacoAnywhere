@@ -10,3 +10,8 @@ declare const __MA_BOOTSTRAP__: boolean;
 declare const __MA_BUILD_VERSION__: string;
 
 declare module "monaco-editor/nls/lang/zh-cn.js";
+
+declare module "*.css?inline" {
+  const css: string;
+  export default css;
+}

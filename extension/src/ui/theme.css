@@ -46,10 +46,13 @@
 @import "@kyralabs/m3e-css/switch.css";
 @import "@kyralabs/m3e-css/dialog.css";
 @import "@kyralabs/m3e-css/snackbar.css";
+@import "@kyralabs/m3e-css/tooltip.css";
 @import "@kyralabs/m3e-css/linear-progress.css";
 @import "@kyralabs/m3e-css/card.css";
 @import "@kyralabs/m3e-css/divider.css";
+@import "@kyralabs/m3e-css/fab.css";
 @import "@kyralabs/m3e-css/list.css";
+@import "@kyralabs/m3e-css/layout.css";
 @import "@kyralabs/m3e-css/loading-indicator.css";
 
 /*
@@ -200,10 +203,6 @@
   flex-direction: column;
   gap: 16px;
   padding: clamp(16px, 3vw, 24px);
-  border: 1px solid var(--m3e-sys-color-outline-variant);
-  border-radius: var(--m3e-sys-shape-corner-large);
-  background-color: var(--m3e-sys-color-surface-container-low);
-  color: var(--m3e-sys-color-on-surface);
 }
 
 :where(.ma-ui) .ma-grid {
@@ -269,35 +268,16 @@
   color: var(--m3e-sys-color-on-primary);
 }
 
+/* Persistent status is supporting text; transient feedback uses M3E Snackbar. */
 :where(.ma-ui) .ma-status {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  max-inline-size: 90ch;
-  padding: 8px 12px;
-  border-radius: var(--m3e-sys-shape-corner-medium);
-  background-color: var(--m3e-sys-color-surface-container);
   color: var(--m3e-sys-color-on-surface-variant);
   font-size: var(--m3e-sys-typescale-body-small-size);
   line-height: var(--m3e-sys-typescale-body-small-line-height);
-}
-
-:where(.ma-ui) .ma-status[data-kind="info"] {
-  background-color: var(--m3e-sys-color-surface-container);
-  color: var(--m3e-sys-color-on-surface-variant);
 }
 
 :where(.ma-ui) .ma-status[data-kind="error"],
 :where(.ma-ui) .ma-error {
-  background-color: var(--m3e-sys-color-error-container);
-  color: var(--m3e-sys-color-on-error-container);
-}
-
-:where(.ma-ui) .ma-error {
-  padding: 10px 12px;
-  border-radius: var(--m3e-sys-shape-corner-medium);
-  font-size: var(--m3e-sys-typescale-body-small-size);
-  line-height: var(--m3e-sys-typescale-body-small-line-height);
+  color: var(--m3e-sys-color-error);
 }
 
 :where(.ma-ui) fieldset {

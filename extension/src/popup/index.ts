@@ -100,7 +100,10 @@ function showError(
 
 function clearError(): void {
   const node = document.getElementById("ma-popup-error");
-  if (node) node.hidden = true;
+  if (node) {
+    setStatus(node, { kind: "info", text: "" });
+    node.hidden = true;
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -277,7 +280,6 @@ async function render(): Promise<void> {
   const ready = settings.backend !== null && settings.onboardingComplete;
   const state = requireElement("ma-popup-state");
   state.textContent = ready ? t("popup.state.ready") : t("popup.state.setup");
-  state.dataset.state = ready ? "ready" : "warn";
 
   requireElement("ma-popup-site").textContent =
     siteHost() ?? t("popup.site.none");
