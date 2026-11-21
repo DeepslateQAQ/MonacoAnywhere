@@ -670,7 +670,7 @@ export function createAtCoderBridge(
         );
       }
       if (readNativeValue(state) === text) return;
-      state.echo.expectWrite(text);
+      state.echo.beginWrite();
       try {
         if (state.kind === "ace") {
           state.editor.setValue(text, -1);
@@ -679,11 +679,12 @@ export function createAtCoderBridge(
           dispatchDomEvent(state.element, "input", { bubbles: true });
         }
       } catch {
-        state.echo.cancelExpectedWrite();
         throw new SiteBridgeError(
           "write-failed",
           "The AtCoder editor rejected the document update."
         );
+      } finally {
+        state.echo.endWrite();
       }
     },
     subscribeNative(

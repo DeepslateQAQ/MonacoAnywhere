@@ -29,7 +29,9 @@ import {
   luoguProblemKey,
   luoguSlotId
 } from "../extension/src/sites/luogu";
-import { SiteBridgeError } from "../extension/src/sites/types";
+import { EchoGuard, SiteBridgeError } from "../extension/src/sites/types";
+import { createGenericAdapter } from "../extension/src/sites/generic";
+import { parseRule } from "../extension/src/content/rules";
 import { chooseProfileForStandard } from "../extension/src/profiles/sync";
 
 /* ------------------------------------------------------------------ */
@@ -854,6 +856,9 @@ function attachCm6(element: FakeElement, initial: string) {
 function makeAce(initial: string) {
   let text = initial;
   const listeners = new Set<() => void>();
+  const emitChange = (): void => {
+    for (const listener of [...listeners]) listener();
+  };
   const session = {
     on(event: string, listener: () => void): void {
       if (event === "change") listeners.add(listener);
@@ -865,8 +870,14 @@ function makeAce(initial: string) {
   const editor = {
     getValue: () => text,
     setValue(next: string): void {
-      text = next;
-      for (const listener of [...listeners]) listener();
+      if (text !== "") {
+        text = "";
+        emitChange();
+      }
+      if (next !== "") {
+        text = next;
+        emitChange();
+      }
     },
     getSession: () => session
   };
@@ -874,7 +885,7 @@ function makeAce(initial: string) {
     editor,
     getText: () => text,
     fire(): void {
-      for (const listener of [...listeners]) listener();
+      emitChange();
     },
     setSilent(next: string): void {
       text = next;
@@ -933,6 +944,167 @@ function makeMonaco(container: FakeElement, initial: string) {
     }
   };
 }
+
+describe("EchoGuard", () => {
+  it("preserves single-value echoes without hiding a mismatching external edit", () => {
+    let text = "initial";
+    const echo = new EchoGuard(() => text);
+    echo.snapshot();
+
+    echo.expectWrite("selected");
+    text = "selected";
+    expect(echo.poll()).toBeNull();
+    text = "initial";
+    expect(echo.poll()).toEqual({ value: "initial" });
+
+    echo.expectWrite("requested");
+    text = "external";
+    expect(echo.poll()).toEqual({ value: "external" });
+    text = "requested";
+    expect(echo.poll()).toEqual({ value: "requested" });
+  });
+
+  it("suppresses nested write snapshots and commits only the actual outer result", () => {
+    let text = "initial";
+    const echo = new EchoGuard(() => text);
+    echo.snapshot();
+    echo.expectWrite("requested");
+
+    echo.beginWrite();
+    text = "";
+    expect(echo.poll()).toBeNull();
+    expect(echo.accept(text)).toBeNull();
+    echo.beginWrite();
+    text = "nested";
+    expect(echo.poll()).toBeNull();
+    echo.endWrite();
+    text = "normalized";
+    expect(echo.accept(text)).toBeNull();
+    echo.endWrite();
+    expect(echo.poll()).toBeNull();
+
+    text = "initial";
+    expect(echo.poll()).toEqual({ value: "initial" });
+    text = "requested";
+    expect(echo.poll()).toEqual({ value: "requested" });
+  });
+});
+
+describe.each([
+  {
+    site: "AtCoder",
+    fixtureName: "atcoder.html",
+    href: "https://atcoder.jp/contests/abc380/submit",
+    createBridge: createAtCoderBridge
+  },
+  {
+    site: "Codeforces",
+    fixtureName: "codeforces.html",
+    href: "https://codeforces.com/problemset/submit",
+    createBridge: createCodeforcesBridge
+  }
+])("$site native Ace write transactions", ({ fixtureName, href, createBridge }) => {
+  const initial = "int main() { return 0; }";
+
+  function setup() {
+    const loaded = loadFixture(fixtureName, href);
+    const element = loaded.doc.querySelector("#editor");
+    if (!element) throw new Error("fixture missing #editor");
+    const ace = makeAce(initial);
+    Reflect.set(element, "env", { editor: ace.editor });
+    const bridge = createBridge({
+      document: loaded.doc,
+      window: loaded.win,
+      location: loaded.location
+    });
+    const [slot] = bridge.locateEditors();
+    if (!slot) throw new Error("Ace slot not located");
+    return { ace, bridge, slot };
+  }
+
+  it("does not publish removal or insertion during consecutive writes", () => {
+    const { ace, bridge, slot } = setup();
+    const rawChanges: string[] = [];
+    ace.editor.getSession().on("change", () => {
+      rawChanges.push(ace.getText());
+    });
+    const changes: string[] = [];
+    bridge.subscribeNative(slot, (text, origin) => {
+      changes.push(`${origin}:${text}`);
+    });
+
+    bridge.writeNative(slot, "int first;", "sync");
+    bridge.writeNative(slot, "int second;", "user");
+    expect(rawChanges).toEqual(["", "int first;", "", "int second;"]);
+    expect(changes).toEqual([]);
+    expect(bridge.readNative(slot)).toBe("int second;");
+    ace.fire();
+    expect(changes).toEqual([]);
+
+    ace.setSilent(initial);
+    ace.fire();
+    ace.setSilent("int first;");
+    ace.fire();
+    ace.fire();
+    expect(changes).toEqual([`user:${initial}`, "user:int first;"]);
+    bridge.destroy();
+  });
+
+  it("commits an empty document without hiding subsequent real empty edits", () => {
+    const { ace, bridge, slot } = setup();
+    const changes: string[] = [];
+    bridge.subscribeNative(slot, (text, origin) => {
+      changes.push(`${origin}:${text}`);
+    });
+
+    bridge.writeNative(slot, "", "sync");
+    expect(bridge.readNative(slot)).toBe("");
+    ace.fire();
+    expect(changes).toEqual([]);
+
+    ace.setSilent(initial);
+    ace.fire();
+    ace.setSilent("");
+    ace.fire();
+    expect(changes).toEqual([`user:${initial}`, "user:"]);
+    bridge.writeNative(slot, "int restored;", "sync");
+    expect(bridge.readNative(slot)).toBe("int restored;");
+    expect(changes).toEqual([`user:${initial}`, "user:"]);
+    bridge.destroy();
+  });
+
+  it("ends a failed setter transaction at the actual partial document", () => {
+    const { ace, bridge, slot } = setup();
+    const changes: string[] = [];
+    bridge.subscribeNative(slot, (text, origin) => {
+      changes.push(`${origin}:${text}`);
+    });
+    const failOnRemoval = (): void => {
+      if (ace.getText() === "") throw new Error("Ace replacement interrupted");
+    };
+    ace.editor.getSession().on("change", failOnRemoval);
+
+    expect(() => bridge.writeNative(slot, "int requested;", "sync")).toThrow(
+      SiteBridgeError
+    );
+    expect(bridge.readNative(slot)).toBe("");
+    expect(changes).toEqual([]);
+    ace.editor.getSession().off("change", failOnRemoval);
+    ace.fire();
+    expect(changes).toEqual([]);
+
+    ace.setSilent("int requested;");
+    ace.fire();
+    expect(changes).toEqual(["user:int requested;"]);
+    bridge.writeNative(slot, "int recovered;", "sync");
+    expect(bridge.readNative(slot)).toBe("int recovered;");
+    expect(changes).toEqual(["user:int requested;"]);
+    ace.setSilent(initial);
+    ace.fire();
+    expect(changes).toEqual(["user:int requested;", `user:${initial}`]);
+    bridge.destroy();
+  });
+});
 
 /* ------------------------------------------------------------------ */
 /* Luogu                                                              */
@@ -1297,6 +1469,25 @@ describe("Codeforces adapter", () => {
     bridge.destroy();
   });
 
+  it("syncs the native source field by name when its ID is absent", () => {
+    const { doc, bridge, ace } = setup();
+    const textarea = doc.querySelector('textarea[name="source"]');
+    if (!textarea) throw new Error("fixture missing source textarea");
+    textarea.removeAttribute("id");
+    const [slot] = bridge.locateEditors();
+    if (!slot) throw new Error("Ace slot not located");
+    const inputs: string[] = [];
+    textarea.addEventListener("input", () => {
+      inputs.push(textarea.value);
+    });
+
+    bridge.writeNative(slot, "int by_name;", "sync");
+    expect(ace.getText()).toBe("int by_name;");
+    expect(textarea.value).toBe("int by_name;");
+    expect(inputs).toEqual(["int by_name;"]);
+    bridge.destroy();
+  });
+
   it("reads runtime programTypeId options and ignores C/GCC C profiles", async () => {
     const { bridge, doc } = setup();
     const [slot] = bridge.locateEditors();
@@ -1581,31 +1772,40 @@ describe("Hydro adapter", () => {
   });
 });
 
-/* ------------------------------------------------------------------ */
-/* Shared fixture sanity                                              */
-/* ------------------------------------------------------------------ */
+describe("generic adapter write transactions", () => {
+  it("never publishes the intermediate empty document of a native replacement", () => {
+    const { doc } = loadFixture(
+      "codeforces.html",
+      "https://codeforces.com/problemset/submit"
+    );
+    const element = doc.querySelector("#editor");
+    if (!element) throw new Error("fixture missing #editor");
+    const ace = makeAce("first");
+    Reflect.set(element, "env", { editor: ace.editor });
+    const rule = parseRule({
+      schema: "monacoanywhere.generic-rule/1",
+      origin: "https://codeforces.com",
+      pathPattern: "/problemset/*",
+      editorSelector: "#editor",
+      editorKind: "ace"
+    });
+    const adapter = createGenericAdapter(rule, element);
+    if (!adapter) throw new Error("generic Ace adapter was not created");
 
-describe("dedicated fixture sanity", () => {
-  it("contains the recon selectors without network access", () => {
-    const luogu = fixture("luogu.html");
-    expect(luogu).toContain("cm-content");
-    expect(luogu).toContain("C++14 (GCC 9)");
-    expect(luogu).toContain("lentille-context");
+    const events: string[] = [];
+    const unsubscribe = adapter.subscribe((text) => events.push(text));
+    adapter.write("second");
+    expect(events).toEqual([]);
+    expect(adapter.read()).toBe("second");
 
-    const atcoder = fixture("atcoder.html");
-    expect(atcoder).toContain('name="data.LanguageId"');
-    expect(atcoder).toContain("C++ IOI-Style(GNU++20)");
-    expect(atcoder).toContain('name="data.TaskScreenName"');
+    ace.setSilent("first");
+    ace.fire();
+    expect(events).toEqual(["first"]);
+    ace.setSilent("");
+    ace.fire();
+    expect(events).toEqual(["first", ""]);
 
-    const codeforces = fixture("codeforces.html");
-    expect(codeforces).toContain('name="programTypeId"');
-    expect(codeforces).toContain("GNU G++23 14.2.0");
-    expect(codeforces).toContain("sourceCodeTextarea");
-
-    const hydro = fixture("hydro.html");
-    expect(hydro).toContain('data-app="Hydro"');
-    expect(hydro).toContain('name="lang"');
-    expect(hydro).toContain('name="code"');
-    expect(hydro).toContain("monaco-cpp@lsp");
+    unsubscribe();
+    adapter.dispose();
   });
 });

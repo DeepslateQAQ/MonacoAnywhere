@@ -61,6 +61,37 @@ function isLuoguEditor(pathname: string, hash: string): boolean {
 }
 
 const ATCODER_EDITOR_PATH = /^\/contests\/[^/]+\/(?:submit|custom_test)\/?$/;
+const ATCODER_TASK_PATH = /^\/contests\/([^/]+)\/tasks\/[^/]+\/?$/;
+
+function isAtCoderEditor(url: URL, doc: Document): boolean {
+  if (ATCODER_EDITOR_PATH.test(url.pathname)) return true;
+  const task = ATCODER_TASK_PATH.exec(url.pathname);
+  if (!task) return false;
+
+  // Task statements can embed the submission form for signed-in users. Match
+  // its source controls structurally: the overlay hides the native editor,
+  // and Ace's page-world instance is not visible to the ISOLATED router.
+  if (doc.querySelector('textarea[name="sourceCode"]')) return true;
+  const form = doc.querySelector("#editor")?.closest("form");
+  if (
+    form?.getAttribute("method")?.toLowerCase() !== "post" ||
+    !form.querySelector('select[name="data.LanguageId"]')
+  ) {
+    return false;
+  }
+  const action = form.getAttribute("action");
+  if (!action) return false;
+  try {
+    const target = new URL(action, url);
+    const submitPath = `/contests/${task[1]}/submit`;
+    return (
+      target.origin === url.origin &&
+      (target.pathname === submitPath || target.pathname === `${submitPath}/`)
+    );
+  } catch {
+    return false;
+  }
+}
 
 const CODEFORCES_EDITOR_PATH =
   /^(?:\/problemset\/|\/(?:contest|gym)\/[^/]+\/|\/group\/[^/]+\/contest\/[^/]+\/)(?:submit|customtest)(?:\/[^/]+){0,2}\/?$/;
@@ -112,7 +143,7 @@ export function detectEditorPage(url: URL, doc: Document): EditorPage | null {
       return { site, originKey: url.origin, routeKey: key };
     }
     case "atcoder": {
-      if (!ATCODER_EDITOR_PATH.test(pathname)) return null;
+      if (!isAtCoderEditor(url, doc)) return null;
       return { site, originKey: url.origin, routeKey: key };
     }
     case "codeforces": {

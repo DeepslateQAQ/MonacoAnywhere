@@ -47,7 +47,7 @@ const ACE_SELECTOR = "#editor";
 const LANGUAGE_SELECT = 'select[name="programTypeId"]';
 const SUBMIT_FORM = "form.submit-form";
 const SOURCE_TEXTAREA = "#sourceCodeTextarea";
-const SOURCE_TEXTAREA_NAME = 'textarea[name="sourceCode"]';
+const SOURCE_TEXTAREA_NAME = 'textarea[name="source"]';
 
 export interface CodeforcesAdapter extends SiteAdapter {
   readonly id: "codeforces";
@@ -613,16 +613,17 @@ export function createCodeforcesBridge(
         );
       }
       if (readNativeValue(state) === text) return;
-      state.echo.expectWrite(text);
+      state.echo.beginWrite();
       try {
         state.editor.setValue(text, -1);
         syncCodeforcesSourceTextarea(pageDocument(), text);
       } catch {
-        state.echo.cancelExpectedWrite();
         throw new SiteBridgeError(
           "write-failed",
           "The Codeforces Ace editor rejected the document update."
         );
+      } finally {
+        state.echo.endWrite();
       }
     },
     subscribeNative(

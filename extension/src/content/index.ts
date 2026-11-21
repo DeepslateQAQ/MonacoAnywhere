@@ -60,6 +60,9 @@ import {
   type GenericRule
 } from "./rules.js";
 import { siteOriginKey } from "../sites/types.js";
+import { applyEditorThemeAccent } from "../ui/editor-accent.js";
+import { Snackbar } from "../ui/snackbar.js";
+import themeCss from "../ui/theme.css?inline";
 
 const BANNER_HOST_ID = "monacoanywhere-content-status";
 const GENERIC_RULES_KEY = "genericRules:v1";
@@ -71,7 +74,6 @@ const BRIDGE_TIMEOUT_LIMIT = 4;
 const REQUEST_TIMEOUT_MS = 2_500;
 const SELECT_TIMEOUT_MS = 5_000;
 const IFRAME_READY_TIMEOUT_MS = 12_000;
-const NOTICE_MS = 10_000;
 const MAX_SLOT_ID_LENGTH = 256;
 const MAX_OPTION_ID_LENGTH = 512;
 const MAX_CONTEXT_FIELD_LENGTH = 2_048;
@@ -87,97 +89,124 @@ function copy(english: string, chinese: string): string {
 }
 
 const COPY = {
-  pageTitle: copy("MonacoAnywhere editor", "MonacoAnywhere 编辑器"),
+  pageTitle: copy(
+    "MonacoAnywhere editor",
+    "MonacoAnywhere 编辑器"
+  ),
   setupIncomplete: copy(
-    "Setup is not complete. Editing and native site submission still work; finish setup to verify C++ language services.",
-    "设置尚未完成。编辑与站点原生提交仍可使用；完成设置后才会验证 C++ 语言服务。"
+    "Setup isn't complete yet. Editing and submitting still work; finish setup to enable C++ language services.",
+    "设置尚未完成。编辑与提交不受影响，完成设置即可启用 C++ 语言服务。"
   ),
   setupFailed: copy(
-    "Could not open setup. Retry from the extension popup.",
+    "Couldn't open setup. Try opening it from the extension popup.",
     "无法打开设置页，请从扩展弹出窗口重试。"
   ),
   siteRemoteActive: copy(
-    "This site provides remote language services. Choose WASM or local clangd to disable the Hydro LSP module in this page; no server changes are needed.",
-    "该站点提供远程语言服务。选择 WASM 或本机 clangd 后，会在当前页面禁用 Hydro LSP 模块，无需修改服务端。"
+    "This site provides its own language service. Choose WASM or Local clangd to switch this page to MonacoAnywhere.",
+    "该站点自带远程语言服务。选择 WASM 或本机 clangd，即可在当前页面禁用 Hydro LSP 并改用 MonacoAnywhere。"
   ),
   siteRemoteUnsupported: copy(
-    "This Hydro LSP module could not be safely intercepted in the client. The site editor is kept; no competing local service will start.",
-    "无法在客户端安全拦截此 Hydro LSP 模块。保留站点编辑器，不会启动竞争的本地服务。"
+    "Couldn't safely pause this page's Hydro LSP. Keeping the site editor to avoid conflicts.",
+    "无法安全暂停此页面的 Hydro LSP。已保留站点原编辑器，以避免服务冲突。"
   ),
   siteRemoteReload: copy(
-    "Save your code, then reload this page to apply the selected backend. The existing Hydro LSP has no public teardown API; the extension will not pretend it has stopped.",
-    "请先保存代码，再刷新页面以应用所选后端。已初始化的 Hydro LSP 没有公开销毁接口，扩展不会将它假报为已停用。"
+    "Save your code, then reload the page to switch backends.",
+    "请先保存代码，再刷新页面以启用所选后端。"
   ),
   siteBackendRequired: copy(
-    "Choose WASM or local clangd to edit this Hydro page with MonacoAnywhere, or keep the site editor.",
-    "要在此 Hydro 页面使用 MonacoAnywhere，请选择 WASM 或本机 clangd；也可以继续使用站点编辑器。"
+    "Choose WASM or Local clangd to use MonacoAnywhere on this Hydro page, or keep the site editor.",
+    "请选择 WASM 或本机 clangd 以在此 Hydro 页面使用 MonacoAnywhere，或继续使用站点编辑器。"
   ),
-  reload: copy("Reload after saving", "保存后刷新"),
+  reload: copy(
+    "Reload after saving",
+    "保存后刷新"
+  ),
   noSlot: copy(
-    "Could not find the site editor on this page. The site editor was left unchanged.",
-    "未能在当前页面找到站点编辑器。站点编辑器未被修改。"
+    "Couldn't find the site editor on this page. Leaving the page unchanged.",
+    "未在当前页面找到站点编辑器，页面未作改动。"
   ),
   selectorFailed: copy(
-    "The site editor was found, but its box could not be uniquely covered. The site editor was left unchanged.",
-    "已找到站点编辑器，但无法唯一定位其显示区域。站点编辑器未被修改。"
+    "Found the site editor, but couldn't match its container uniquely. Leaving the page unchanged.",
+    "已找到站点编辑器，但无法唯一定位其区域，页面未作改动。"
   ),
   bridgeUnreachable: copy(
-    "Could not reach the page adapter. The site editor was left unchanged. Retry, or reload the page.",
-    "无法连接页面适配层。站点编辑器未被修改。请重试或刷新页面。"
+    "Couldn't connect to the page adapter. Retry or reload the page.",
+    "无法连接页面适配器，请重试或刷新页面。"
   ),
   adapterUnavailable: copy(
-    "This page has no usable MonacoAnywhere adapter. The site editor was left unchanged.",
-    "当前页面没有可用的 MonacoAnywhere 适配器。站点编辑器未被修改。"
+    "No MonacoAnywhere adapter is available for this page.",
+    "当前页面没有可用的 MonacoAnywhere 适配器。"
   ),
   iframeTimeout: copy(
-    "The extension editor did not become ready. The site editor was restored.",
-    "扩展编辑器未能就绪，站点编辑器已恢复。"
+    "MonacoAnywhere editor timed out while loading. Restored the site editor.",
+    "MonacoAnywhere 编辑器加载超时，已恢复站点原编辑器。"
   ),
   invalidContext: copy(
-    "The site adapter returned an editor identity that cannot be used for local drafts. The site editor was left unchanged.",
-    "站点适配器返回了无法用于本地草稿的编辑器标识。站点编辑器未被修改。"
+    "Couldn't identify this editor for local drafts. Leaving the site editor unchanged.",
+    "无法识别此编辑器的草稿标识，已保留站点原编辑器。"
   ),
   textTooLarge: copy(
-    "The site editor text is too large to mirror safely. The site editor was left unchanged.",
-    "站点编辑器文本过大，无法安全镜像。站点编辑器未被修改。"
+    "The code in the site editor is too large to mirror safely. Leaving the site editor unchanged.",
+    "站点编辑器中的代码过大，已保留站点原编辑器。"
   ),
   settingsError: copy(
-    "Could not read extension settings. Editing still works.",
-    "无法读取扩展设置。编辑仍可使用。"
+    "Couldn't read extension settings. Editing still works.",
+    "无法读取扩展设置，编辑不受影响。"
   ),
   syncWriteError: copy(
-    "Could not sync your edit to the site editor: {detail}",
-    "无法将编辑同步到站点编辑器：{detail}"
+    "Couldn't sync edits to the site editor: {detail}",
+    "无法将更改同步到站点编辑器：{detail}"
   ),
   noStandard: copy(
-    "This site has no {standard} option. The site language was not changed.",
-    "该站点没有 {standard} 选项，站点语言未被修改。"
+    "This site doesn't have a {standard} option.",
+    "该站点没有 {standard} 选项，未更改语言。"
   ),
   languageError: copy(
     "Language control error: {detail}",
-    "语言控件错误：{detail}"
+    "语言控件出错：{detail}"
   ),
   languageUnsupported: copy(
-    "The site language control could not be used. Language changes stay manual on this page.",
-    "无法使用站点语言控件。此页面的语言切换需要手动完成。"
+    "Couldn't control the site's language selector. Switch languages directly on the page instead.",
+    "无法操作站点语言控件，请在页面上手动切换语言。"
   ),
   subscribeFailed: copy(
-    "Native site changes will not be mirrored: {detail}",
-    "站点原生变更将无法同步：{detail}"
+    "External changes in the site editor won't sync automatically: {detail}",
+    "站点编辑器的外部变动将无法自动同步：{detail}"
   ),
   editorPostFailed: copy(
-    "Could not deliver a message to the extension editor.",
-    "无法向扩展编辑器传递消息。"
+    "Couldn't send a message to the MonacoAnywhere editor.",
+    "无法向 MonacoAnywhere 编辑器发送消息。"
   ),
-  finishSetup: copy("Finish setup", "完成设置"),
-  chooseBackend: copy("Choose backend", "选择后端"),
+  finishSetup: copy(
+    "Finish setup",
+    "完成设置"
+  ),
+  chooseBackend: copy(
+    "Choose backend",
+    "选择后端"
+  ),
   useWasm: "WASM clangd",
-  useNative: copy("Local clangd", "本机 clangd"),
-  useSite: copy("Keep site service", "保留站点服务"),
-  retry: copy("Retry", "重试"),
-  dismiss: copy("Dismiss", "关闭"),
-  dismissAria: copy("Dismiss status message", "关闭状态提示"),
-  title: "MonacoAnywhere"
+  useNative: copy(
+    "Local clangd",
+    "本机 clangd"
+  ),
+  useSite: copy(
+    "Keep site service",
+    "保留站点服务"
+  ),
+  retry: copy(
+    "Retry",
+    "重试"
+  ),
+  dismiss: copy(
+    "Dismiss",
+    "关闭"
+  ),
+  dismissAria: copy(
+    "Dismiss status message",
+    "关闭状态提示"
+  ),
+  title: "MonacoAnywhere",
 } as const;
 
 function format(template: string, values: Record<string, string>): string {
@@ -260,20 +289,21 @@ interface BannerModel {
   readonly siteRemoteWarning: string | null;
   readonly siteOrigin: string | null;
   readonly error: string | null;
-  readonly notice: string | null;
   readonly canRetry: boolean;
   readonly reloadRequired: boolean;
 }
 
 interface BannerActions {
-  openSetup(): void;
+  openSetup(onFailure: () => void): void;
   retry(): void;
   chooseSite(kind: "wasm" | "native" | "site"): void;
   reload(): void;
 }
 
 class StatusBanner {
-  private host: HTMLDivElement | null = null;
+  private readonly host = document.createElement("div");
+  readonly root = document.createElement("div");
+  private card: HTMLDivElement | null = null;
   private currentSignature = "";
   private dismissedSignature = "";
   private renderedSignature = "";
@@ -281,14 +311,60 @@ class StatusBanner {
 
   constructor(actions: BannerActions) {
     this.actions = actions;
+    this.host.id = BANNER_HOST_ID;
+    const shadow = this.host.attachShadow({ mode: "open" });
+    const style = document.createElement("style");
+    style.textContent = `${themeCss}
+      :host { all: initial; }
+      :where(.ma-ui).ma-content-notifications {
+        position: fixed;
+        inset-inline-end: 16px;
+        inset-block-start: 16px;
+        z-index: 2147483647;
+        display: grid;
+        gap: 16px;
+        max-inline-size: min(420px, calc(100vw - 32px));
+        pointer-events: none;
+      }
+      :where(.ma-ui) .ma-content-banner {
+        display: grid;
+        gap: 12px;
+        padding: 16px;
+        pointer-events: auto;
+      }
+      :where(.ma-ui) .ma-content-banner__text { overflow-wrap: anywhere; }
+      :where(.ma-ui) .ma-content-banner__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      :where(.ma-ui) .m3e-snackbar-host:empty { display: none; }
+    `;
+    this.root.className = "ma-ui ma-content-notifications";
+    shadow.append(style, this.root);
+  }
+
+  mount(): void {
+    if (!this.host.isConnected) {
+      (document.body ?? document.documentElement).append(this.host);
+    }
+  }
+
+  setTheme(settings: Pick<Settings, "theme" | "editorTheme">): void {
+    if (settings.theme === "system") {
+      delete this.root.dataset.theme;
+    } else {
+      this.root.dataset.theme = settings.theme;
+    }
+    applyEditorThemeAccent(this.root, settings.editorTheme);
   }
 
   update(model: BannerModel): void {
     const hasContent =
       model.setupIncomplete ||
       model.siteRemoteWarning !== null ||
-      model.error !== null ||
-      model.notice !== null;
+      model.error !== null;
     if (!hasContent) {
       this.dismissedSignature = "";
       this.hide();
@@ -300,7 +376,7 @@ class StatusBanner {
       this.hide();
       return;
     }
-    if (signature === this.renderedSignature && this.host !== null) {
+    if (signature === this.renderedSignature && this.card !== null) {
       return;
     }
     this.render(model);
@@ -308,8 +384,8 @@ class StatusBanner {
   }
 
   hide(): void {
-    this.host?.remove();
-    this.host = null;
+    this.card?.remove();
+    this.card = null;
     this.renderedSignature = "";
   }
 
@@ -320,91 +396,42 @@ class StatusBanner {
 
   private render(model: BannerModel): void {
     this.hide();
-    const host = document.createElement("div");
-    host.id = BANNER_HOST_ID;
-    host.style.position = "fixed";
-    host.style.right = "16px";
-    host.style.bottom = "16px";
-    host.style.zIndex = "2147483647";
-
-    const shadow = host.attachShadow({ mode: "open" });
-    const style = document.createElement("style");
-    style.textContent = `
-      :host { all: initial; }
-      .banner {
-        box-sizing: border-box;
-        display: grid;
-        gap: 8px;
-        max-width: min(420px, calc(100vw - 32px));
-        padding: 10px 12px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        border-radius: 12px;
-        background: rgba(28, 27, 31, 0.96);
-        color: #f4eff4;
-        font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
-        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
-      }
-      .title { font-weight: 650; letter-spacing: 0.01em; }
-      .text { color: #d7d0db; overflow-wrap: anywhere; }
-      .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-      button {
-        min-height: 32px;
-        padding: 0 12px;
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        border-radius: 999px;
-        background: transparent;
-        color: inherit;
-        font: inherit;
-        cursor: pointer;
-      }
-      button.primary {
-        border-color: transparent;
-        background: #d0bcff;
-        color: #201a2b;
-        font-weight: 650;
-      }
-      button:focus-visible {
-        outline: 2px solid #efb8c8;
-        outline-offset: 2px;
-      }
-      button:disabled { cursor: progress; opacity: 0.7; }
-    `;
-
+    this.mount();
     const banner = document.createElement("div");
-    banner.className = "banner";
+    banner.className = "m3e-card m3e-card--elevated ma-content-banner";
     banner.setAttribute("role", "status");
 
-    const title = document.createElement("div");
-    title.className = "title";
+    const title = document.createElement("h3");
     title.textContent = COPY.title;
 
     const messages = document.createElement("div");
-    messages.className = "text";
+    messages.className = "ma-content-banner__text";
     const lines = [
       model.error,
       model.siteRemoteWarning,
-      model.notice,
       model.setupIncomplete ? COPY.setupIncomplete : null
     ].filter((line): line is string => typeof line === "string" && line !== "");
     messages.textContent = lines.join(" ");
 
     const actions = document.createElement("div");
-    actions.className = "actions";
+    actions.className = "ma-content-banner__actions";
 
     if (model.setupIncomplete) {
       const setup = document.createElement("button");
       setup.type = "button";
-      setup.className = "primary";
+      setup.className = "m3e-button m3e-button--filled m3e-button--size-s";
       setup.textContent = COPY.finishSetup;
       setup.addEventListener("click", () => {
         setup.disabled = true;
-        this.actions.openSetup();
+        this.actions.openSetup(() => {
+          setup.disabled = false;
+        });
       });
       actions.append(setup);
     } else if (model.reloadRequired) {
       const reload = document.createElement("button");
       reload.type = "button";
-      reload.className = "primary";
+      reload.className = "m3e-button m3e-button--filled m3e-button--size-s";
       reload.textContent = COPY.reload;
       reload.addEventListener("click", () => this.actions.reload());
       actions.append(reload);
@@ -419,7 +446,7 @@ class StatusBanner {
         if (disabledForUnsupported && kind !== "site") continue;
         const choose = document.createElement("button");
         choose.type = "button";
-        choose.className = kind === "site" ? "" : "primary";
+        choose.className = `m3e-button m3e-button--size-s m3e-button--${kind === "site" ? "outlined" : "filled"}`;
         choose.textContent = label;
         choose.addEventListener("click", () => {
           choose.disabled = true;
@@ -432,6 +459,7 @@ class StatusBanner {
     if (model.canRetry) {
       const retry = document.createElement("button");
       retry.type = "button";
+      retry.className = "m3e-button m3e-button--outlined m3e-button--size-s";
       retry.textContent = COPY.retry;
       retry.addEventListener("click", () => {
         retry.disabled = true;
@@ -442,15 +470,15 @@ class StatusBanner {
 
     const close = document.createElement("button");
     close.type = "button";
+    close.className = "m3e-button m3e-button--text m3e-button--size-s";
     close.textContent = COPY.dismiss;
     close.setAttribute("aria-label", COPY.dismissAria);
     close.addEventListener("click", () => this.dismiss());
     actions.append(close);
 
     banner.append(title, messages, actions);
-    shadow.append(style, banner);
-    (document.body ?? document.documentElement).append(host);
-    this.host = host;
+    this.root.prepend(banner);
+    this.card = banner;
   }
 }
 
@@ -613,13 +641,14 @@ class PageBridge {
 class ContentController {
   private readonly bridge = new PageBridge((event) => this.handleSiteEvent(event));
   private readonly banner = new StatusBanner({
-    openSetup: () => this.openSetup(),
+    openSetup: (onFailure) => this.openSetup(onFailure),
     retry: () => this.retryMount(),
     reload: () => location.reload(),
     chooseSite: (kind) => {
       void this.chooseSiteBackend(kind);
     }
   });
+  private readonly snackbar = new Snackbar(this.banner.root);
   private readonly extensionOrigin = readExtensionOrigin();
 
   private page: EditorPage | null = null;
@@ -634,8 +663,6 @@ class ContentController {
   private settings: Settings | null = null;
   private settingsError: string | null = null;
   private error: string | null = null;
-  private notice: string | null = null;
-  private noticeTimer: number | null = null;
   private canRetry = false;
 
   private generation = 0;
@@ -659,6 +686,7 @@ class ContentController {
   private retainedChoiceOrigin: string | null = null;
   private pageSiteRemote: SiteContext["siteRemote"] | null = null;
   private removePickerShortcut: (() => void) | null = null;
+  private pickerOpen = false;
 
   private readonly onRuntimeMessage = (
     message: unknown,
@@ -741,10 +769,15 @@ class ContentController {
   }
 
   private async pickGenericEditor(): Promise<void> {
+    if (this.pickerOpen) return;
+    this.pickerOpen = true;
+    this.banner.hide();
     try {
       const controller = openGenericPicker({
         locale: navigator.language,
-        strings: defaultPickerStrings(navigator.language)
+        strings: defaultPickerStrings(navigator.language),
+        theme: this.settings?.theme,
+        editorTheme: this.settings?.editorTheme
       });
       const outcome = await controller.result;
       if (outcome.status !== "selected") return;
@@ -795,6 +828,9 @@ class ContentController {
           ? `编辑器拾取失败：${bridgeDetail(error)}`
           : `Editor picker failed: ${bridgeDetail(error)}`
       );
+    } finally {
+      this.pickerOpen = false;
+      this.updateBanner();
     }
   }
 
@@ -867,7 +903,7 @@ class ContentController {
           );
           return;
         }
-        if (message.text === this.lastIframeText) return;
+        if (message.text === this.lastIframeText && !this.writeInFlight) return;
         void this.queueSiteWrite(message.text);
         return;
       }
@@ -907,6 +943,7 @@ class ContentController {
     if (choiceChanged) this.stopMount();
     this.settings = settings;
     this.settingsError = null;
+    this.banner.setTheme(settings);
     this.updateBanner();
     if (retryUnmounted) {
       // The first route check can run before settings load; a retained Monaco
@@ -1028,7 +1065,7 @@ class ContentController {
     this.writeInFlight = false;
     this.error = null;
     this.canRetry = false;
-    this.clearNotice();
+    this.snackbar.clear();
   }
 
   private async beginMount(
@@ -1317,7 +1354,8 @@ class ContentController {
         this.showNotice(format(COPY.languageError, { detail: message })),
       onStandardUnavailable: (standard) =>
         this.showNotice(
-          format(COPY.noStandard, { standard: standard.replace("c++", "C++") })
+          format(COPY.noStandard, { standard: standard.replace("c++", "C++") }),
+          "info"
         )
     };
     this.language = new LanguageSync(slot.slotId, page.site, channel);
@@ -1385,6 +1423,8 @@ class ContentController {
             },
             SELECT_TIMEOUT_MS
           );
+          if (!this.isCurrent(generation) || this.writeLoopToken !== token) return;
+          this.lastIframeText = next;
         } catch (error) {
           if (this.isCurrent(generation)) {
             this.showNotice(
@@ -1567,7 +1607,7 @@ class ContentController {
     }
   }
 
-  private openSetup(): void {
+  private openSetup(onFailure: () => void): void {
     chrome.runtime.sendMessage(
       { __ma: 1, type: "ma/open-onboarding" },
       (reply: unknown) => {
@@ -1578,34 +1618,23 @@ class ContentController {
           reply !== null &&
           (reply as Record<string, unknown>).ok === true;
         if (!ok) {
+          onFailure();
           this.showNotice(COPY.setupFailed);
         }
       }
     );
   }
 
-  private showNotice(message: string): void {
-    this.notice = message;
-    if (this.noticeTimer !== null) {
-      window.clearTimeout(this.noticeTimer);
-    }
-    this.noticeTimer = window.setTimeout(() => {
-      this.noticeTimer = null;
-      this.notice = null;
-      this.updateBanner();
-    }, NOTICE_MS);
-    this.updateBanner();
-  }
-
-  private clearNotice(): void {
-    if (this.noticeTimer !== null) {
-      window.clearTimeout(this.noticeTimer);
-      this.noticeTimer = null;
-    }
-    this.notice = null;
+  private showNotice(message: string, kind: "info" | "error" = "error"): void {
+    this.banner.mount();
+    this.snackbar.show(message, { kind });
   }
 
   private updateBanner(): void {
+    if (this.pickerOpen) {
+      this.banner.hide();
+      return;
+    }
     const settings = this.settings;
     const setupIncomplete =
       settings !== null &&
@@ -1651,7 +1680,6 @@ class ContentController {
             this.page?.originKey ??
             null,
       error,
-      notice: this.notice,
       canRetry: this.canRetry && this.page !== null && error !== null,
       reloadRequired
     });

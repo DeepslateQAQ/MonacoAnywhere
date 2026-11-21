@@ -25,7 +25,6 @@ import {
   type SiteBackend
 } from "../background/state.js";
 import {
-  ANONYMOUS_ACCOUNT_SCOPE,
   openDraftSession,
   type DraftConflict,
   type DraftConflictChoice,
@@ -62,12 +61,14 @@ import {
 import { getLocale, setLocale, t } from "../ui/i18n.js";
 import { applyEditorThemeAccent } from "../ui/editor-accent.js";
 import { el, openDialog, setStatus } from "../ui/primitives.js";
+import { Snackbar, type SnackbarAction } from "../ui/snackbar.js";
 import {
   fitsSiteMessageText,
   listenToContent,
   postEditorMessage
 } from "./site-messages.js";
 import {
+  fallbackMessageKey,
   resolveContextProfile,
   standardCandidates,
   type SiteProfileLookup
@@ -238,16 +239,12 @@ document.documentElement.dataset.maStandalone = standaloneMode ? "1" : "0";
 
 const statusNode = document.getElementById("ma-editor-status");
 const siteStatusNode = document.getElementById("ma-editor-site-status");
-const draftRowNode = document.getElementById("ma-editor-draft");
-const draftStatusNode = document.getElementById("ma-editor-draft-status");
-const draftScopeNode = document.getElementById("ma-editor-draft-scope");
-const draftCheckButton = document.getElementById(
-  "ma-draft-check"
-) as HTMLButtonElement | null;
 const siteToolbarNode = document.getElementById("ma-editor-site-toolbar");
 const standardSelectNode = document.getElementById("ma-editor-standard");
+const uiRoot = document.querySelector<HTMLElement>(".ma-ui");
 
 if (
+  !uiRoot ||
   !siteToolbarNode ||
   !(standardSelectNode instanceof HTMLSelectElement)
 ) {
@@ -258,6 +255,7 @@ const siteToolbarNodes: SiteToolbarNodes = {
   standardSelect: standardSelectNode
 };
 const siteToolbar: HTMLElement = siteToolbarNode;
+const draftSnackbar = new Snackbar(uiRoot);
 buildStandardOptions(siteToolbarNodes.standardSelect);
 
 document.body.classList.toggle("ma-site-mode", !fixtureMode);
@@ -298,11 +296,9 @@ let suppressAutosave = false;
 let pendingConflict: DraftConflict | null = null;
 let pendingLocalEditAt = 0;
 let conflictDialogOpen = false;
-let draftAction: (() => void) | null = null;
 let unsubscribeDraft: (() => void) | null = null;
 let unsubscribeSettings: (() => void) | null = null;
 let unlistenContent: (() => void) | null = null;
-let draftStatusTimer: number | null = null;
 
 let currentBackend: BackendChoice | null = null;
 let currentSettings: Settings | null = null;
@@ -319,36 +315,12 @@ let siteLanguageChoiceOpen = false;
 let languageEpoch = 0;
 let languageGeneration = 0;
 let activeSiteProfileKey: string | null = null;
+let siteProfileWarning: string | null = null;
 
 function buildModeLabel(): string {
   return t(
     __MA_BOOTSTRAP__ ? "build.mode.bootstrap" : "build.mode.production"
   );
-}
-
-function renderDraftScope(): void {
-  if (!draftScopeNode) {
-    return;
-  }
-  // Keep the scope in the DOM for assistive technology/tests, but the compact
-  // header does not repeat account/problem text on every page.
-  draftScopeNode.hidden = true;
-  if (localMode()) {
-    draftScopeNode.textContent = t("editor.draft.scopeAnon");
-    return;
-  }
-  if (!siteContext) {
-    draftScopeNode.textContent = "";
-    return;
-  }
-  const account =
-    siteContext.accountScope === ANONYMOUS_ACCOUNT_SCOPE
-      ? t("editor.site.anonymous")
-      : siteContext.accountScope;
-  draftScopeNode.textContent = t("editor.site.scope", {
-    account,
-    problem: siteContext.problemKey
-  });
 }
 
 function renderHeading(): void {
@@ -363,7 +335,6 @@ function renderHeading(): void {
     }`;
     title.append(version);
   }
-  renderDraftScope();
 }
 
 function currentSiteProfile(): SiteProfileLookup {
@@ -453,43 +424,20 @@ function renderServiceStatus(): void {
   });
 }
 
-function syncDraftRow(): void {
-  if (!draftRowNode) return;
-  const statusVisible = draftStatusNode !== null && !draftStatusNode.hidden;
-  const actionVisible = draftCheckButton !== null && !draftCheckButton.hidden;
-  draftRowNode.hidden = !statusVisible && !actionVisible;
-}
-
-function setDraftStatus(kind: "info" | "error", text: string): void {
-  if (!draftStatusNode) {
-    return;
-  }
-  if (draftStatusTimer !== null) {
-    window.clearTimeout(draftStatusTimer);
-    draftStatusTimer = null;
-  }
-  setStatus(draftStatusNode, { kind, text });
-  draftStatusNode.hidden = text.length === 0;
-  if (kind === "info" && text.length > 0) {
-    draftStatusTimer = window.setTimeout(() => {
-      draftStatusTimer = null;
-      if (draftStatusNode) draftStatusNode.hidden = true;
-      syncDraftRow();
-    }, 2_500);
-  }
-  syncDraftRow();
-}
-
-function setDraftAction(
-  label: string | null,
-  action: (() => void) | null
+function setDraftStatus(
+  kind: "info" | "error",
+  text: string,
+  action?: SnackbarAction
 ): void {
-  draftAction = action;
-  if (draftCheckButton) {
-    draftCheckButton.hidden = label === null;
-    draftCheckButton.textContent = label ?? "";
-  }
-  syncDraftRow();
+  draftSnackbar.show(text, { kind, action });
+}
+
+function showDraftSaveError(error: unknown): void {
+  setDraftStatus(
+    "error",
+    t("editor.draft.saveError", { error: String(error) }),
+    { label: t("editor.draft.retrySave"), run: () => void retrySave() }
+  );
 }
 
 function applyThemePreference(theme: Settings["theme"]): void {
@@ -660,6 +608,8 @@ function handleNativeText(text: string): void {
     }
     return;
   }
+  // A genuine site edit invalidates the previous write's echo marker too.
+  lastSentSiteText = null;
   siteNativeText = text;
   replaceModelText(text, {
     preserveUndo: true,
@@ -772,15 +722,7 @@ function conflictBody(conflict: DraftConflict): HTMLElement {
     fieldset.append(
       el(
         "label",
-        {
-          class: "ma-choice m3e-radio-button",
-          style: {
-            display: "flex",
-            alignItems: "flex-start",
-            gap: "8px",
-            padding: "8px 0"
-          }
-        },
+        { class: "m3e-radio-button" },
         [
           el("input", {
             class: "m3e-radio-button__input",
@@ -850,7 +792,6 @@ function handleSaveResult(result: DraftSaveResult): void {
   if (result.status === "saved") {
     pendingConflict = null;
     pendingLocalEditAt = 0;
-    setDraftAction(null, null);
     showSaved(result.record, result.wrote);
     return;
   }
@@ -869,16 +810,17 @@ async function resolveConflict(
     const result = await session.resolve(conflict, choice);
     if (result.status === "conflict") {
       pendingConflict = result.conflict;
-      setDraftStatus("error", t("editor.draft.conflictStale"));
-      setDraftAction(t("editor.draft.resolve"), () => {
-        void showConflict(result.conflict);
+      setDraftStatus("error", t("editor.draft.conflictStale"), {
+        label: t("editor.draft.resolve"),
+        run: () => {
+          void showConflict(result.conflict);
+        }
       });
       return;
     }
 
     pendingConflict = null;
     pendingLocalEditAt = 0;
-    setDraftAction(null, null);
     session.adopt(result.record);
     if (choice === "other-page" || result.record.writerId !== session.writerId) {
       // The explicit choice selects the stored copy (or the newer remote one).
@@ -911,10 +853,7 @@ async function resolveConflict(
       })
     );
   } catch (error: unknown) {
-    setDraftStatus(
-      "error",
-      t("editor.draft.saveError", { error: String(error) })
-    );
+    showDraftSaveError(error);
   }
 }
 
@@ -948,12 +887,7 @@ async function openConflictDialog(conflict: DraftConflict): Promise<void> {
   };
   conflictDialogOpen = true;
   pendingConflict = workingConflict;
-  setDraftAction(t("editor.draft.resolve"), () => {
-    if (pendingConflict) {
-      void showConflict(pendingConflict);
-    }
-  });
-  setDraftStatus("error", t("editor.draft.deferred"));
+  draftSnackbar.clear();
 
   try {
     const body = conflictBody(workingConflict);
@@ -967,7 +901,12 @@ async function openConflictDialog(conflict: DraftConflict): Promise<void> {
     );
     conflictDialogOpen = false;
     if (!accepted) {
-      setDraftStatus("error", t("editor.draft.deferred"));
+      setDraftStatus("error", t("editor.draft.deferred"), {
+        label: t("editor.draft.resolve"),
+        run: () => {
+          if (pendingConflict) void showConflict(pendingConflict);
+        }
+      });
       return;
     }
     const selected = body.querySelector<HTMLInputElement>(
@@ -983,10 +922,7 @@ async function openConflictDialog(conflict: DraftConflict): Promise<void> {
     await resolveConflict(workingConflict, choice);
   } catch (error: unknown) {
     conflictDialogOpen = false;
-    setDraftStatus(
-      "error",
-      t("editor.draft.saveError", { error: String(error) })
-    );
+    showDraftSaveError(error);
   }
 }
 
@@ -1002,7 +938,6 @@ function handleDraftEvent(event: DraftSessionEvent): void {
     case "saved":
       pendingConflict = null;
       pendingLocalEditAt = 0;
-      setDraftAction(null, null);
       showSaved(event.record, event.wrote);
       break;
     case "conflict":
@@ -1014,9 +949,11 @@ function handleDraftEvent(event: DraftSessionEvent): void {
       }
       break;
     case "lease-lost":
-      setDraftStatus("error", t("editor.draft.leaseLost"));
-      setDraftAction(t("editor.draft.retrySave"), () => {
-        void retrySave();
+      setDraftStatus("error", t("editor.draft.leaseLost"), {
+        label: t("editor.draft.retrySave"),
+        run: () => {
+          void retrySave();
+        }
       });
       break;
   }
@@ -1036,10 +973,7 @@ async function retrySave(): Promise<void> {
     const result = await session.saveNow(currentDraftInput());
     handleSaveResult(result);
   } catch (error: unknown) {
-    setDraftStatus(
-      "error",
-      t("editor.draft.saveError", { error: String(error) })
-    );
+    showDraftSaveError(error);
   }
 }
 
@@ -1053,8 +987,7 @@ function closeDraftSession(): void {
   editedBeforeReady = false;
   pendingConflict = null;
   pendingLocalEditAt = 0;
-  setDraftAction(null, null);
-  setDraftStatus("info", "");
+  draftSnackbar.clear();
 }
 
 function draftRestoreLabels(stored: DraftRecord): {
@@ -1081,7 +1014,7 @@ async function initialiseDrafts(): Promise<void> {
   const epoch = ++draftEpoch;
   const parts = draftParts;
   draftReady = false;
-  setDraftAction(null, null);
+  draftSnackbar.clear();
   let session: DraftSession | null = null;
   try {
     session = await openDraftSession(parts, {
@@ -1089,13 +1022,7 @@ async function initialiseDrafts(): Promise<void> {
         if (epoch !== draftEpoch) {
           return;
         }
-        setDraftStatus(
-          "error",
-          t("editor.draft.saveError", { error: String(error) })
-        );
-        setDraftAction(t("editor.draft.retrySave"), () => {
-          void retrySave();
-        });
+        showDraftSaveError(error);
       }
     });
     const stored = await session.load();
@@ -1163,11 +1090,9 @@ async function initialiseDrafts(): Promise<void> {
     draftReady = false;
     setDraftStatus(
       "error",
-      t("editor.draft.loadError", { error: String(error) })
+      t("editor.draft.loadError", { error: String(error) }),
+      { label: t("editor.draft.retrySave"), run: () => void initialiseDrafts() }
     );
-    setDraftAction(t("editor.draft.retrySave"), () => {
-      void initialiseDrafts();
-    });
   }
 }
 
@@ -1194,15 +1119,8 @@ model.onDidChangeContent(() => {
   try {
     draftSession.scheduleSave(input);
   } catch (error: unknown) {
-    setDraftStatus(
-      "error",
-      t("editor.draft.saveError", { error: String(error) })
-    );
+    showDraftSaveError(error);
   }
-});
-
-draftCheckButton?.addEventListener("click", () => {
-  draftAction?.();
 });
 
 async function initialisePreferences(): Promise<void> {
@@ -1458,11 +1376,14 @@ async function startLanguageServices(
         }
         if (status.kind === "initialized") {
           languageRestartAttempts = 0;
+          const readyText = t("editor.status.lspReady", {
+            server: status.serverName ?? "clangd"
+          });
           setStatus(statusNode, {
             kind: "info",
-            text: t("editor.status.lspReady", {
-              server: status.serverName ?? "clangd"
-            })
+            text: siteProfileWarning
+              ? `${siteProfileWarning} ${readyText}`
+              : readyText
           });
         } else if (status.kind === "closed") {
           // The model and its text stay alive; reconnect a fresh session.
@@ -1508,6 +1429,7 @@ async function startFixtureLanguageServices(): Promise<void> {
   if (!FIXTURE_PROFILE) {
     return;
   }
+  siteProfileWarning = null;
   await startLanguageServices(FIXTURE_PROFILE, "fixture");
 }
 
@@ -1520,7 +1442,15 @@ async function startStandaloneLanguageServices(): Promise<void> {
     );
     return;
   }
+  siteProfileWarning = null;
   await startLanguageServices(profile, "fixture");
+}
+
+function siteFallbackText(warning: {
+  readonly reason: "unsupported" | "unrecognized";
+  readonly label: string;
+}): string {
+  return t(fallbackMessageKey(warning), { label: warning.label });
 }
 
 function reportSiteProfile(lookup: SiteProfileLookup): void {
@@ -1552,12 +1482,14 @@ async function restartSiteLanguageServices(): Promise<void> {
   }
   if (currentSettings?.siteBackends[context.originKey] === "site") {
     stopLocalLanguageServices();
+    siteProfileWarning = null;
     renderSiteUi();
     setLanguageStatus("info", t("editor.site.remoteSiteStatus"));
     return;
   }
   if (remoteBlocksLocal(siteRemoteState)) {
     stopLocalLanguageServices();
+    siteProfileWarning = null;
     renderSiteUi();
     reportRemoteBlocked(siteRemoteState);
     return;
@@ -1565,14 +1497,19 @@ async function restartSiteLanguageServices(): Promise<void> {
   const lookup = resolveContextProfile(context);
   renderSiteUi();
   if (lookup.kind !== "profile") {
+    siteProfileWarning = null;
     activeSiteProfileKey = null;
     languageEpoch += 1;
     disposeLanguageServices();
     reportSiteProfile(lookup);
     return;
   }
+  siteProfileWarning = lookup.warning ? siteFallbackText(lookup.warning) : null;
   const key = profileKey(lookup.profile);
   if (key === activeSiteProfileKey) {
+    if (siteProfileWarning) {
+      setLanguageStatus("info", siteProfileWarning);
+    }
     return;
   }
   activeSiteProfileKey = key;
@@ -1611,6 +1548,7 @@ function enterSiteMode(context: SiteContext): void {
     };
     siteBaseText = context.initialText;
     siteNativeText = context.initialText;
+    lastSentSiteText = null;
     replaceModelText(context.initialText, {
       preserveUndo: false,
       autosave: false,

@@ -349,6 +349,10 @@ export interface GenericLanguageControl {
 
 interface ChangeHub<T> {
   subscribe(listener: (value: T) => void): () => void;
+  /** Suppress notifications from a multi-step native replacement. */
+  beginWrite(): void;
+  /** Commit the actual result after the outermost replacement. */
+  endWrite(): void;
   markSeen(): void;
   dispose(): void;
 }
@@ -360,10 +364,11 @@ function createChangeHub<T>(
   let last = read();
   let detach: (() => void) | null = null;
   let disposed = false;
+  let writeDepth = 0;
   const listeners = new Set<(value: T) => void>();
 
   const notify = (): void => {
-    if (disposed) {
+    if (disposed || writeDepth > 0) {
       return;
     }
     const value = read();
@@ -397,6 +402,18 @@ function createChangeHub<T>(
           detach = null;
         }
       };
+    },
+    beginWrite() {
+      writeDepth += 1;
+    },
+    endWrite() {
+      if (writeDepth === 0) {
+        return;
+      }
+      writeDepth -= 1;
+      if (writeDepth === 0) {
+        last = read();
+      }
     },
     markSeen() {
       last = read();
@@ -698,13 +715,17 @@ function createTextareaAdapter(element: HTMLElement): TextareaEditorAdapter {
   });
 
   const write = (text: string, _origin?: EditorWriteOrigin): void => {
-    if (contentEditable) {
-      element.textContent = text;
-    } else {
-      setNativeTextareaValue(element as HTMLTextAreaElement, text);
+    hub.beginWrite();
+    try {
+      if (contentEditable) {
+        element.textContent = text;
+      } else {
+        setNativeTextareaValue(element as HTMLTextAreaElement, text);
+      }
+      dispatchInputAndChange(element);
+    } finally {
+      hub.endWrite();
     }
-    hub.markSeen();
-    dispatchInputAndChange(element);
   };
 
   return {
@@ -784,8 +805,12 @@ function createAceAdapter(host: HTMLElement, editor: AceEditorLike): GenericEdit
     element: host,
     read,
     write(text) {
-      editor.setValue(text, -1);
-      hub.markSeen();
+      hub.beginWrite();
+      try {
+        editor.setValue(text, -1);
+      } finally {
+        hub.endWrite();
+      }
     },
     subscribe: (listener) => hub.subscribe(listener),
     dispose: () => hub.dispose()
@@ -829,8 +854,12 @@ function createCodeMirror5Adapter(
     element: host,
     read,
     write(text) {
-      instance.setValue(text);
-      hub.markSeen();
+      hub.beginWrite();
+      try {
+        instance.setValue(text);
+      } finally {
+        hub.endWrite();
+      }
     },
     subscribe: (listener) => hub.subscribe(listener),
     dispose: () => hub.dispose()
@@ -940,14 +969,18 @@ function createCodeMirror6Adapter(
     element: host,
     read,
     write(text) {
-      view.dispatch({
-        changes: {
-          from: 0,
-          to: view.state.doc.length,
-          insert: text
-        }
-      });
-      hub.markSeen();
+      hub.beginWrite();
+      try {
+        view.dispatch({
+          changes: {
+            from: 0,
+            to: view.state.doc.length,
+            insert: text
+          }
+        });
+      } finally {
+        hub.endWrite();
+      }
     },
     subscribe: (listener) => hub.subscribe(listener),
     dispose: () => hub.dispose()
@@ -1061,23 +1094,27 @@ function createMonacoAdapter(
     element: host,
     read,
     write(text) {
-      const model = monacoModel(editor);
-      if (
-        model &&
-        typeof model.getFullModelRange === "function" &&
-        typeof editor.executeEdits === "function"
-      ) {
-        editor.executeEdits("monacoanywhere", [
-          { range: model.getFullModelRange(), text }
-        ]);
-      } else if (model && typeof model.setValue === "function") {
-        model.setValue(text);
-      } else if (typeof editor.setValue === "function") {
-        editor.setValue(text);
-      } else {
-        throw new Error("Monaco editor does not expose a writable model");
+      hub.beginWrite();
+      try {
+        const model = monacoModel(editor);
+        if (
+          model &&
+          typeof model.getFullModelRange === "function" &&
+          typeof editor.executeEdits === "function"
+        ) {
+          editor.executeEdits("monacoanywhere", [
+            { range: model.getFullModelRange(), text }
+          ]);
+        } else if (model && typeof model.setValue === "function") {
+          model.setValue(text);
+        } else if (typeof editor.setValue === "function") {
+          editor.setValue(text);
+        } else {
+          throw new Error("Monaco editor does not expose a writable model");
+        }
+      } finally {
+        hub.endWrite();
       }
-      hub.markSeen();
     },
     subscribe: (listener) => hub.subscribe(listener),
     dispose: () => hub.dispose()

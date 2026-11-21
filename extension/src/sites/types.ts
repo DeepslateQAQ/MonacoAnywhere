@@ -513,6 +513,7 @@ export interface ObservedValue {
 export class EchoGuard {
   private last: string | null = null;
   private expectedWrite: string | null = null;
+  private writeDepth = 0;
 
   constructor(private readonly read: () => string) {}
 
@@ -526,6 +527,18 @@ export class EchoGuard {
     }
   }
 
+  /** Suppress all intermediate snapshots from a synchronous native write. */
+  beginWrite(): void {
+    this.writeDepth += 1;
+  }
+
+  /** Commit the actual result after the outermost write, even if it failed. */
+  endWrite(): void {
+    if (this.writeDepth === 0) return;
+    this.writeDepth -= 1;
+    if (this.writeDepth === 0) this.snapshot();
+  }
+
   /** Register the value our write is expected to produce. */
   expectWrite(value: string): void {
     this.expectedWrite = value;
@@ -537,6 +550,7 @@ export class EchoGuard {
 
   /** Read the current value and report an external change, if any. */
   poll(): ObservedValue | null {
+    if (this.writeDepth > 0) return null;
     let value: string;
     try {
       value = this.read();
@@ -552,6 +566,7 @@ export class EchoGuard {
   }
 
   private observe(value: string): ObservedValue | null {
+    if (this.writeDepth > 0) return null;
     if (this.expectedWrite !== null) {
       const expected = this.expectedWrite;
       this.expectedWrite = null;
